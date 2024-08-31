@@ -64,7 +64,7 @@ class ProductDataSchema(Schema):
 class Order:
     """Модель заказа"""
     def __init__(self,
-        status: int,
+        status: int = 0,
         idOrder: Optional[int] = None,
         datetimeCreation: Optional[str] = None,
         totalCost: Optional[int] = 0,
@@ -163,6 +163,10 @@ class Order:
     def is_actual(self):
         """Метод возвращает True если заказ всё еще актуален"""
         return self.status not in [0, 7, 8, 9]
+
+    def add_product(self, product: Product) -> None:
+        """Метод добавляет в заказ новый продукт"""
+        self.products.append(product)
 
 
 class OrderSchema(Schema):
