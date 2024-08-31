@@ -1,0 +1,16 @@
+bot:                             # Настройки бота
+  env:                              # Переменные окружения
+    token: TOKEN_BOT_IRON_SELLER       # Токен бота
+
+logger:
+  development_logger_level: DEBUG
+  business_logger_level: DEBUG
+
+api:
+  shopper: http://45.141.78.238:5100/user
+  order: http://45.141.78.238:5100/order
+  category: http://45.141.78.238:5100/category
+  product: http://45.141.78.238:5100/product
+
+shopper_data:
+  session_time: 1200
