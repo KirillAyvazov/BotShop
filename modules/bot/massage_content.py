@@ -19,7 +19,7 @@ class MessageContent:
             with open(self.__path, 'r') as file:
                 return json.loads(file.read())
 
-        raise FileNotFoundError('В проекте отсутствует файл с текстом сообщений - text_message.txt')
+        raise FileNotFoundError(f'В проекте отсутствует файл с текстом сообщений - {self.__path}')
 
     def __get_message_content(self) -> None:
         """Метод заполняет экземпляр класса полями и значениями c текстом сообщений"""
