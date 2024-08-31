@@ -19,6 +19,7 @@ class ShopperOrdersPool:
         self.__order_schema = OrderSchema()
         self.__content_type: Dict[str, str] = {'Content-Type': 'application/json'}
         self.pool: Optional[List[Order]] = self.__api_get_orders()
+        self.basket: Optional[Order] = self.__basket_search()
 
     def __api_get_orders(self) -> List[Order]:
         """Метод получает от внешнего API список заказов"""
@@ -41,6 +42,17 @@ class ShopperOrdersPool:
     def __call__(self, *args, **kwargs) -> List[Order]:
         """При обращении к объекту пула заказов как к вызываемому объекту будет возвращен список заказов"""
         return self.pool
+
+    def __basket_search(self) -> Order:
+        """Метод осуществляет поиск корзины среди заказов покупателя. Если таковой нет - создает новую корзину"""
+        result = list(filter(lambda i_order: i_order.status == 0, self.pool))
+
+        if len(result) > 0:
+            basket = result[0]
+            self.pool.remove(basket)
+
+        return Order(self.__tgId)
+
 
 
 

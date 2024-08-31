@@ -3,7 +3,7 @@
 помощи которого осуществляется хранение, доступ и редактирование заказов пользователя.
 """
 from marshmallow import Schema, fields, post_load, validate
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 import requests
 from marshmallow.fields import Field
 import json
@@ -64,12 +64,12 @@ class ProductDataSchema(Schema):
 class Order:
     """Модель заказа"""
     def __init__(self,
-        idOrder: int,
         status: int,
-        datetimeCreation: str,
-        totalCost: int,
-        delivery: bool,
-        products: str,
+        idOrder: Optional[int] = None,
+        datetimeCreation: Optional[str] = None,
+        totalCost: Optional[int] = 0,
+        delivery: bool = False,
+        products: Union[str, List[Product]] = list(),
         datetimeUpdate: Optional[str] = None,
         userComment: Optional[str] = None,
         sellerСomment: Optional[str] = None,
