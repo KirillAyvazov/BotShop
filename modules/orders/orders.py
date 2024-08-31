@@ -205,17 +205,33 @@ class Basket(Order):
         self.products.append(product)
         self.totalCost += product.count * product.price
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Данный метод предоставляет текстовую информацию о корзине при обращении к ней как к текстовому объекту"""
-        text = list()
-        text.append(f"Всего {len(self.products)} товаров на сумму {self.totalCost} рублей:\n")
+        if len(self.products) > 0:
+            text = list()
+            text.append(f"Всего {len(self.products)} товаров на сумму {self.totalCost} рублей:\n")
 
-        for index, i_product in enumerate(self.products):
-            i_product: Product
-            text.append(f'{index + 1}. {i_product.category}: {i_product.name} x {i_product.count} ='
-                        f' {i_product.count * i_product.price}')
+            for index, i_product in enumerate(self.products):
+                i_product: Product
+                text.append(f'{index + 1}. {i_product.category}: {i_product.name} x {i_product.count} ='
+                            f' {i_product.count * i_product.price}')
 
-        return '\n'.join(text)
+            return '\n'.join(text)
+        return ''
+
+    def delete(self, index: int) -> None:
+        """Метод удаления переданного товара из корзины"""
+        self.products.insert(index)
+
+    def clear(self) -> None:
+        """Метод удаляет все продукты из корзины"""
+        self.products = list()
+
+    def get_list_product_name(self) -> List[str]:
+        list_product_name = list()
+        for index, i_product in self.products:
+            list_product_name.append(f'{index+1}. {i_product.category}: {i_product.name} - {i_product.count} шт.')
+        return list_product_name
 
 
 class OrderSchema(Schema):
