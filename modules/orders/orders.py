@@ -209,10 +209,13 @@ class Basket(Order):
         """Данный метод предоставляет текстовую информацию о корзине при обращении к ней как к текстовому объекту"""
         text = list()
         text.append(f"Всего {len(self.products)} товаров на сумму {self.totalCost} рублей:\n")
+
         for index, i_product in enumerate(self.products):
             i_product: Product
             text.append(f'{index + 1}. {i_product.category}: {i_product.name} x {i_product.count} ='
                         f' {i_product.count * i_product.price}')
+
+        return '\n'.join(text)
 
 
 class OrderSchema(Schema):
