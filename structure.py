@@ -49,4 +49,3 @@ category_pool.data_control()
 
 # Создаем объект и получаем текст сообщений из json файла
 message_content = MessageContent('text_message.json')
-print(message_content.show_basket)
