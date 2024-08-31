@@ -14,3 +14,7 @@ api:
 
 shopper_data:
   session_time: 1200
+
+
+product_data:
+  update_period: 1800

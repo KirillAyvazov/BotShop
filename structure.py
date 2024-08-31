@@ -1,6 +1,6 @@
 from modules.configurator import Configurator
 from modules.logger import logger_init
-from modules.bot import BotShop, CommandPool
+from modules.bot import BotShop, CommandPool, MessageContent
 from modules.user import ShopperPool
 from modules.products import CategoryPool
 
@@ -45,3 +45,8 @@ category_pool = CategoryPool(url_category=configurator.api.category,
 
 # Запускаем поток по контролю обновлений товаров
 category_pool.data_control()
+
+
+# Создаем объект и получаем текст сообщений из json файла
+message_content = MessageContent('text_message.json')
+print(message_content.show_basket)
