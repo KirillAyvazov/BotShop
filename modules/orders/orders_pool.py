@@ -50,6 +50,6 @@ class ShopperOrdersPool:
         if len(result) > 0:
             order = result[0]
             self.pool.remove(order)
-            return Basket(**{i_attr: i_val for i_attr, i_val in order.__dict__.items()})
+            return Basket(**{i_attr: i_val for i_attr, i_val in order.__dict__.items() if not i_attr.startswith('_')})
 
         return Basket()
