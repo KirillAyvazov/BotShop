@@ -11,7 +11,7 @@ from telebot.types import BotCommand
 
 @dataclass
 class Command:
-    command: str
+    name: str
     description: str
     priority: int
 
@@ -32,4 +32,4 @@ class CommandPool:
     def connect_commands(self) -> None:
         """Данный метод фильтрует команды из пула команд по их приоритету и присваивает их боту"""
         self.__pool.sort(key=lambda i_command: i_command.priority)
-        self.__bot.set_my_commands([BotCommand(i_command.command, i_command.description) for i_command in self.__pool])
+        self.__bot.set_my_commands([BotCommand(i_command.name, i_command.description) for i_command in self.__pool])
