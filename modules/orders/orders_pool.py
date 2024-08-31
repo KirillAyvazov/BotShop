@@ -4,7 +4,7 @@ import requests
 import json
 import time
 
-from .orders import OrderSchema, Order
+from .orders import OrderSchema, Order, Basket
 from ..logger import get_development_logger
 
 
@@ -48,10 +48,8 @@ class ShopperOrdersPool:
         result = list(filter(lambda i_order: i_order.status == 0, self.pool))
 
         if len(result) > 0:
-            basket = result[0]
-            self.pool.remove(basket)
+            order = result[0]
+            self.pool.remove(order)
+            return Basket(**{i_attr: i_val for i_attr, i_val in order.__dict__.items()})
 
-        return Order(self.__tgId)
-
-
-
+        return Basket()

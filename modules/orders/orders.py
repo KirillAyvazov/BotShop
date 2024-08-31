@@ -89,9 +89,9 @@ class Order:
         self.completionDate: Optional[str] = completionDate
         self.source: Optional[str] = source
 
-        self.__product_data_schema = ProductDataSchema()
-        self.__content_type: Dict[str, str] = {'Content-Type': 'application/json'}
-        self.__product_url: str = product_url
+        self._product_data_schema = ProductDataSchema()
+        self._content_type: Dict[str, str] = {'Content-Type': 'application/json'}
+        self._product_url: str = product_url
 
         self.__get_product_obj()
 
@@ -99,9 +99,9 @@ class Order:
         """Метод преобразует полученные данные о товарах в список объектов - товаров"""
         for i_dict in self.products:
             i_dict: Dict[str, Any]
-            i_dict.update({"product_url": self.__product_url})
+            i_dict.update({"product_url": self._product_url})
 
-        list_product_data: List[ProductData] = self.__product_data_schema.loads(json.dumps(self.products), many=True)
+        list_product_data: List[ProductData] = self._product_data_schema.loads(json.dumps(self.products), many=True)
         self.products: List[Product] = [i_product_data.product for i_product_data in list_product_data]
 
     def __repr__(self) -> str:
@@ -164,10 +164,6 @@ class Order:
         """Метод возвращает True если заказ всё еще актуален"""
         return self.status not in [0, 7, 8, 9]
 
-    def add_product(self, product: Product) -> None:
-        """Метод добавляет в заказ новый продукт"""
-        self.products.append(product)
-
 
 class OrderSchema(Schema):
     """
@@ -192,3 +188,52 @@ class OrderSchema(Schema):
     def create_order(self, data, **kwargs) -> Order:
         """Метод позволяет возвратить после загрузки данных объект заказа"""
         return Order(**data)
+
+
+class Basket(Order):
+    """
+        Класс - корзина пользователя. Является дочерним классом для класса Заказов и является хранилищем продуктов
+    которые покупатель только собирается купить. Предоставляет соответсвующий интерфейс для взаимодействия с товарами.
+    """
+    def __init__(self,
+                 status: int = 0,
+                 idOrder: Optional[int] = None,
+                 datetimeCreation: Optional[str] = None,
+                 totalCost: Optional[int] = 0,
+                 delivery: bool = False,
+                 products: Union[str, List[Product]] = list(),
+                 datetimeUpdate: Optional[str] = None,
+                 userComment: Optional[str] = None,
+                 sellerСomment: Optional[str] = None,
+                 completionDate: Optional[str] = None,
+                 source: Optional[str] = None,
+                 product_url: Optional[str] = None
+                 ):
+        super().__init__(
+        status,
+        idOrder,
+        datetimeCreation,
+        totalCost,
+        delivery,
+        products,
+        datetimeUpdate,
+        userComment,
+        sellerСomment,
+        completionDate,
+        source,
+        product_url
+        )
+
+    def add_product(self, product: Product) -> None:
+        """Метод добавляет в заказ новый продукт"""
+        self.products.append(product)
+        self.totalCost += product.count * product.price
+
+    def __repr__(self):
+        """Данный метод предоставляет текстовую информацию о корзине при обращении к ней как к текстовому объекту"""
+        text = list()
+        text.append(f"Всего {len(self.products)} товаров на сумму {self.totalCost} рублей:\n")
+        for index, i_product in enumerate(self.products):
+            i_product: Product
+            text.append(f'{index+1}. {i_product.category}: {i_product.name} x {i_product.count} ='
+                        f' {i_product.count*i_product.price}')
