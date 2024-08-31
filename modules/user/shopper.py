@@ -98,6 +98,12 @@ class Shopper(User):
             if self.__orders:
                 return self.__orders()
 
+    def get_basket(self) -> Order:
+        """Метод возвращает корзину пользователя, представляющую собой заказ со статусом 0"""
+        time_start = time.time()
+        while time.time() - time_start < 4:
+            if self.__orders:
+                return self.__orders.basket
 
 
 class ShopperSchema(Schema):
