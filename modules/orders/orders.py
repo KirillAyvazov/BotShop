@@ -165,6 +165,56 @@ class Order:
         return self.status not in [0, 7, 8, 9]
 
 
+class Basket(Order):
+    """
+        Класс - корзина пользователя. Является дочерним классом для класса Заказов и является хранилищем продуктов
+    которые покупатель только собирается купить. Предоставляет соответсвующий интерфейс для взаимодействия с товарами.
+    """
+
+    def __init__(self,
+                 status: int = 0,
+                 idOrder: Optional[int] = None,
+                 datetimeCreation: Optional[str] = None,
+                 totalCost: Optional[int] = 0,
+                 delivery: bool = False,
+                 products: Union[str, List[Product]] = list(),
+                 datetimeUpdate: Optional[str] = None,
+                 userComment: Optional[str] = None,
+                 sellerСomment: Optional[str] = None,
+                 completionDate: Optional[str] = None,
+                 source: Optional[str] = None,
+                 product_url: Optional[str] = None
+                 ):
+        super().__init__(
+            status,
+            idOrder,
+            datetimeCreation,
+            totalCost,
+            delivery,
+            products,
+            datetimeUpdate,
+            userComment,
+            sellerСomment,
+            completionDate,
+            source,
+            product_url
+        )
+
+    def add_product(self, product: Product) -> None:
+        """Метод добавляет в заказ новый продукт"""
+        self.products.append(product)
+        self.totalCost += product.count * product.price
+
+    def __repr__(self):
+        """Данный метод предоставляет текстовую информацию о корзине при обращении к ней как к текстовому объекту"""
+        text = list()
+        text.append(f"Всего {len(self.products)} товаров на сумму {self.totalCost} рублей:\n")
+        for index, i_product in enumerate(self.products):
+            i_product: Product
+            text.append(f'{index + 1}. {i_product.category}: {i_product.name} x {i_product.count} ='
+                        f' {i_product.count * i_product.price}')
+
+
 class OrderSchema(Schema):
     """
         Класс - модель данных json о заказе получаемого от внешнего API при запросе заказа. Служит для валидации,
@@ -187,53 +237,11 @@ class OrderSchema(Schema):
     @post_load
     def create_order(self, data, **kwargs) -> Order:
         """Метод позволяет возвратить после загрузки данных объект заказа"""
+        status = data.get('status')
+        if status == 0:
+            return Basket(**data)
+
         return Order(**data)
 
 
-class Basket(Order):
-    """
-        Класс - корзина пользователя. Является дочерним классом для класса Заказов и является хранилищем продуктов
-    которые покупатель только собирается купить. Предоставляет соответсвующий интерфейс для взаимодействия с товарами.
-    """
-    def __init__(self,
-                 status: int = 0,
-                 idOrder: Optional[int] = None,
-                 datetimeCreation: Optional[str] = None,
-                 totalCost: Optional[int] = 0,
-                 delivery: bool = False,
-                 products: Union[str, List[Product]] = list(),
-                 datetimeUpdate: Optional[str] = None,
-                 userComment: Optional[str] = None,
-                 sellerСomment: Optional[str] = None,
-                 completionDate: Optional[str] = None,
-                 source: Optional[str] = None,
-                 product_url: Optional[str] = None
-                 ):
-        super().__init__(
-        status,
-        idOrder,
-        datetimeCreation,
-        totalCost,
-        delivery,
-        products,
-        datetimeUpdate,
-        userComment,
-        sellerСomment,
-        completionDate,
-        source,
-        product_url
-        )
 
-    def add_product(self, product: Product) -> None:
-        """Метод добавляет в заказ новый продукт"""
-        self.products.append(product)
-        self.totalCost += product.count * product.price
-
-    def __repr__(self):
-        """Данный метод предоставляет текстовую информацию о корзине при обращении к ней как к текстовому объекту"""
-        text = list()
-        text.append(f"Всего {len(self.products)} товаров на сумму {self.totalCost} рублей:\n")
-        for index, i_product in enumerate(self.products):
-            i_product: Product
-            text.append(f'{index+1}. {i_product.category}: {i_product.name} x {i_product.count} ='
-                        f' {i_product.count*i_product.price}')
