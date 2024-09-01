@@ -221,7 +221,7 @@ class Basket(Order):
 
     def delete(self, index: int) -> None:
         """Метод удаления переданного товара из корзины"""
-        self.products.insert(index)
+        self.products.pop(index)
 
     def clear(self) -> None:
         """Метод удаляет все продукты из корзины"""
