@@ -1,4 +1,4 @@
-data_base/
+database/
 log_data/
 .idea/
 __pycache__/
