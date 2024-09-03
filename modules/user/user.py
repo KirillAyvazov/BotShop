@@ -69,6 +69,7 @@ class User:
         self.registered_on_server: bool = False
         self.product_index: int = 0
         self.order_index: int = 0
+        self.category_index: int = 0
 
         self.__restore_data_in_local_db()
 
