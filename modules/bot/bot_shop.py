@@ -149,5 +149,5 @@ class BotShop(TeleBot):
             try:
                 super().polling(*args, **kwargs)
 
-            except Exception:
-                pass
+            except Exception as ex:
+                dev_log.exception('Бот упал с ошибкой:', exc_info=ex)

@@ -2,6 +2,7 @@
     Данные модуль содержит описание основных сущностей, при помощи которых реализовано хранение и взаимодействие с
 продаваемыми в магазине товарами.
 """
+import os.path
 from typing import List, Dict, Optional, Any
 from telebot.types import InputMediaPhoto
 import requests
@@ -63,7 +64,14 @@ class Product:
         InputMediaPhoto - объекты, которые объект телеграм бота способен отправить пользователю в виде группового
         сообщения
         """
-        return [InputMediaPhoto(i_elem) for i_elem in self.__get_list_images(list_url[:10]) if isinstance(i_elem, bytes)]
+        list_input_media_photo = [InputMediaPhoto(i_elem)
+                                  for i_elem in self.__get_list_images(list_url[:10])
+                                  if isinstance(i_elem, bytes)]
+
+        if len(list_input_media_photo) == 0:
+            path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static', 'placeholder.png')
+            with open(path, 'rb') as file:
+                list_input_media_photo.append(InputMediaPhoto(file.read()))
 
     def __repr__(self) -> str:
         """Метод возвращает строку с информацией о товаре при обращении к объекту продукта как к типу str"""
