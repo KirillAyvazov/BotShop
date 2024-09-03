@@ -15,6 +15,7 @@ from queue import Queue, LifoQueue
 from telebot.types import Message
 
 from ..logger import get_development_logger
+from ..products import Product
 
 
 dev_log = get_development_logger(__name__)
@@ -70,6 +71,8 @@ class User:
         self.product_index: int = 0
         self.order_index: int = 0
         self.category_index: int = 0
+        self.product_viewed: Optional[Product] = None
+        self.count_product: int = 1
 
         self.__restore_data_in_local_db()
 

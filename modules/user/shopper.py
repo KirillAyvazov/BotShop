@@ -14,8 +14,9 @@ import json
 from sqlalchemy.testing.pickleable import Order
 
 from .user import User
-from ..orders import ShopperOrdersPool, Order
+from ..orders import ShopperOrdersPool, Order, Basket
 from ..logger import get_development_logger
+from ..products import Product
 from ..utils import execute_in_new_thread
 
 
@@ -43,7 +44,6 @@ class Shopper(User):
         self.nickname: Optional[str] = nickname
         self.phoneNumber: Optional[str] = phoneNumber
         self.homeAddress: Optional[str] = homeAddress
-        self.basket: Optional[Order] = None
         self.__orders: Optional[ShopperOrdersPool] = None
         self.__personal_data_cache = self.__get_personal_data_cache()
 
@@ -98,7 +98,7 @@ class Shopper(User):
             if self.__orders:
                 return self.__orders()
 
-    def get_basket(self) -> Order:
+    def get_basket(self) -> Basket:
         """Метод возвращает корзину пользователя, представляющую собой заказ со статусом 0"""
         time_start = time.time()
         while time.time() - time_start < 4:

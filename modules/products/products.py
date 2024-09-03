@@ -73,6 +73,8 @@ class Product:
             with open(path, 'rb') as file:
                 list_input_media_photo.append(InputMediaPhoto(file.read()))
 
+        return list_input_media_photo
+
     def __repr__(self) -> str:
         """Метод возвращает строку с информацией о товаре при обращении к объекту продукта как к типу str"""
         return (f"<b>Категория:</b> {self.category}\n<b>Название:</b> {self.name}\n<b>Цена:</b> "

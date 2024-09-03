@@ -114,7 +114,9 @@ class BotShop(TeleBot):
         self.send_message(user_id, text)
         self.delete_state(user_id)
 
-    def send_product(self, chat_id: int, product, text_message: Optional[str] = None, keyboard = None) -> Message:
+    def send_product(self, chat_id: int, product, text_message: Optional[str] = None,
+                     post_text_message: Optional[str] = None,
+                     keyboard = None) -> Message:
         """
             Метод предназначен для отправки пользователю информации о товаре - все имеющиеся изображения и описание,
         а так же клавиатуру для управления карточкой товара. На вход метод принимает id пользователя, объект - продукт,
@@ -126,6 +128,9 @@ class BotShop(TeleBot):
             text = str(product)
             if text_message:
                 text = '\n\n'.join([text_message, text])
+
+            if post_text_message:
+                text = '\n\n'.join([text, post_text_message])
 
             msg_caption = self.send_message(chat_id, text=text, reply_markup=keyboard, disable_notification=True)
 
