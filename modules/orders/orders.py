@@ -189,7 +189,7 @@ class Basket(Order):
             status,
             idOrder,
             datetimeCreation,
-            totalCost,
+               totalCost,
             delivery,
             products,
             datetimeUpdate,
@@ -202,8 +202,20 @@ class Basket(Order):
 
     def add_product(self, product: Product) -> None:
         """Метод добавляет в заказ новый продукт"""
-        self.products.append(product)
-        self.totalCost += product.count * product.price
+        product_in_basket = list(filter(lambda i_product: i_product.__dict__ == product.__dict__, self.products))
+
+        if len(product_in_basket) > 0:
+            new_product: Product = product_in_basket[0]
+            new_product.count += product.count
+
+        else:
+            self.products.append(product)
+
+        self.__update_total_cost()
+
+    def __update_total_cost(self):
+        """Метод пересчитывает общую стоимость всех товаров в корзине"""
+        self.totalCost = sum([i_product.count * i_product.price for i_product in self.products])
 
     def __repr__(self) -> str:
         """Данный метод предоставляет текстовую информацию о корзине при обращении к ней как к текстовому объекту"""
@@ -222,10 +234,12 @@ class Basket(Order):
     def delete(self, index: int) -> None:
         """Метод удаления переданного товара из корзины"""
         self.products.pop(index)
+        self.__update_total_cost()
 
     def clear(self) -> None:
         """Метод удаляет все продукты из корзины"""
         self.products = list()
+        self.__update_total_cost()
 
     def get_list_product_name(self) -> List[str]:
         """Метод возвращает список названий товаров в корзине"""
