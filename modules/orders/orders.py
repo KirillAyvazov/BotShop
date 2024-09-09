@@ -235,7 +235,8 @@ class Basket(Order):
                  sellerСomment: Optional[str] = None,
                  completionDate: Optional[str] = None,
                  source: Optional[str] = None,
-                 product_url: Optional[str] = None
+                 product_url: Optional[str] = None,
+                 order_url: Optional[str] = None,
                  ):
         super().__init__(
             status,
@@ -249,7 +250,8 @@ class Basket(Order):
             sellerСomment,
             completionDate,
             source,
-            product_url
+            product_url,
+            order_url
         )
 
     def add_product(self, product: Product, count: int) -> None:
@@ -318,7 +320,8 @@ class OrderSchema(Schema):
     completionDate = fields.Str(required=False, allow_none=True)
     totalCost = fields.Int(required=True, allow_none=False)
     delivery = fields.Boolean(required=True, allow_none=False)
-    products = fields.List(Field, required=True, allow_none=False)
+    #products = fields.List(ProductDataSchema, required=True, allow_none=False)
+    products = fields.Nested(ProductDataSchema, many=True, required=True)
     source = fields.Str(required=False, allow_none=True, dump_only=True, validate=[validate.OneOf(['buyer', 'seller'])])
     product_url = fields.Str(required=True, allow_none=False, load_only=True)
     order_url = fields.Str(required=True, allow_none=False, load_only=True)

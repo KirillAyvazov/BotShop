@@ -54,4 +54,4 @@ class ShopperOrdersPool:
             self.pool.remove(basket)
             return basket
 
-        return Basket()
+        return Basket(product_url=self.__product_url, order_url=self.__url_order)
