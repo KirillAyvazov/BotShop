@@ -339,6 +339,3 @@ class OrderSchema(Schema):
             return Basket(**data)
 
         return Order(**data)
-
-
-
