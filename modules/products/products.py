@@ -22,7 +22,7 @@ class Product:
     """Класс - модель единицы продаваемой продукции"""
     def __init__(self, productId: str, name: str, price: int, description: str, image: List[str], delivery: bool,
                  category: str, count: int = 1):
-        self.productId: str = productId
+        self.productsId: str = productId
         self.name: str = name
         self.price: int = price
         self.description: str = description
@@ -33,7 +33,7 @@ class Product:
 
     def __eq__(self, other):
         """Метод сравнения двух продуктов по их id"""
-        return self.productId == getattr(other, "productId", None)
+        return self.productsId == getattr(other, "productId", None)
 
     @classmethod
     def __get_bytes_by_url(cls, url: str) -> bytes:

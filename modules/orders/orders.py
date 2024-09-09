@@ -8,6 +8,7 @@ import requests
 from marshmallow.fields import Field
 import json
 from copy import deepcopy
+from datetime import datetime
 
 from ..products import Product, ProductSchema
 from ..logger import get_development_logger
@@ -23,7 +24,7 @@ class ProductData:
     данного модуля.
     """
     def __init__(self, productsId: str, count: int, product_url: str):
-        self.productId: str = productsId
+        self.productsId: str = productsId
         self.count: int = count
         self.__product_url: str = product_url
         self.__content_type: Dict[str, str] = {'Content-Type': 'application/json'}
@@ -52,7 +53,7 @@ class ProductDataSchema(Schema):
         Класс - модель данных json получаемого от внешнего API при запросе продукта. Служит для валидации, сериализации
     и десериализации данных
     """
-    productId = fields.Str(required=True, allow_none=False)
+    productsId = fields.Str(required=True, allow_none=False)
     count = fields.Integer(required=True, allow_none=False)
     product_url = fields.Str(required=True, allow_none=False, load_only=True)
 
@@ -68,13 +69,13 @@ class Order:
         tgId: Optional[int] = None,
         status: int = 0,
         idOrder: Optional[int] = None,
-        datetimeCreation: Optional[str] = None,
+        datetimeCreation: Optional[str] = datetime.now().strftime("%d-%m-%Y %H:%M"),
         totalCost: Optional[int] = 0,
         delivery: bool = False,
         products: Union[str, List[Product]] = list(),
         datetimeUpdate: Optional[str] = None,
         userComment: Optional[str] = None,
-        sellerСomment: Optional[str] = None,
+        sellerComment: Optional[str] = None,
         completionDate: Optional[str] = None,
         source: Optional[str] = None,
         product_url: Optional[str] = None,
@@ -90,7 +91,7 @@ class Order:
         self.products: str = products
         self.datetimeUpdate: Optional[str] = datetimeUpdate
         self.userComment: Optional[str] = userComment
-        self.sellerСomment: Optional[str] = sellerСomment
+        self.sellerComment: Optional[str] = sellerComment
         self.completionDate: Optional[str] = completionDate
         self.source: Optional[str] = source
 
@@ -235,7 +236,7 @@ class Basket(Order):
                  products: Union[str, List[Product]] = list(),
                  datetimeUpdate: Optional[str] = None,
                  userComment: Optional[str] = None,
-                 sellerСomment: Optional[str] = None,
+                 sellerComment: Optional[str] = None,
                  completionDate: Optional[str] = None,
                  source: Optional[str] = None,
                  product_url: Optional[str] = None,
@@ -251,7 +252,7 @@ class Basket(Order):
             products,
             datetimeUpdate,
             userComment,
-            sellerСomment,
+            sellerComment,
             completionDate,
             source,
             product_url,
@@ -320,7 +321,7 @@ class OrderSchema(Schema):
     datetimeCreation = fields.Str(required=True, allow_none=True)
     datetimeUpdate = fields.Str(required=False, allow_none=True)
     userComment = fields.Str(required=False, allow_none=True, validate=[validate.Length(0, 201)])
-    sellerСomment = fields.Str(required=False, allow_none=True, validate=[validate.Length(0, 501)])
+    sellerComment = fields.Str(required=False, allow_none=True, validate=[validate.Length(0, 501)])
     completionDate = fields.Str(required=False, allow_none=True)
     totalCost = fields.Int(required=True, allow_none=False)
     delivery = fields.Boolean(required=True, allow_none=False)
