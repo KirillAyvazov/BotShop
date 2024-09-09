@@ -212,6 +212,9 @@ class ShopperPool:
 
             i_shopper.saving_to_local_db()
 
+            for i_order in i_shopper.get_orders():
+                i_order.save_on_server()
+
             if i_shopper.is_changed() and i_shopper.registered_on_server:
                 self.__api_put(i_shopper)
             elif not i_shopper.registered_on_server:

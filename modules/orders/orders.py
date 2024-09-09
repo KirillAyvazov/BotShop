@@ -76,7 +76,9 @@ class Order:
         sellerСomment: Optional[str] = None,
         completionDate: Optional[str] = None,
         source: Optional[str] = None,
-        product_url: Optional[str] = None
+        product_url: Optional[str] = None,
+        order_url: Optional[str] = None,
+        registered_on_server: bool = False
         ):
         self.idOrder = idOrder
         self.status: int = status
@@ -91,8 +93,13 @@ class Order:
         self.source: Optional[str] = source
 
         self._product_data_schema = ProductDataSchema()
+        self._order_schema = OrderSchema()
         self._content_type: Dict[str, str] = {'Content-Type': 'application/json'}
+        self._order_url: str = order_url
         self._product_url: str = product_url
+
+        self._registered_on_server: bool = registered_on_server
+        self._control_hash: int = self.__get_hash_sum()
 
         self.__get_product_obj()
 
@@ -104,6 +111,50 @@ class Order:
 
         list_product_data: List[ProductData] = self._product_data_schema.loads(json.dumps(self.products), many=True)
         self.products: List[Product] = [i_product_data.product for i_product_data in list_product_data]
+
+    def __api_post(self):
+        """Метод передачи данных о заказе на сервер"""
+        try:
+            data = self._order_schema.dumps(self)
+            response = requests.post(self._order_url, headers=self._content_type, data=data)
+
+            if response.status_code == 200:
+                dev_log.debug(f'Данные заказа №{self.idOrder} успешно переданы на сервер')
+            else:
+                dev_log.warning(f'Не удалось передать заказ №{self.idOrder} на сервер. Статус код {response.status_code}')
+
+        except Exception as ex:
+            dev_log.exception(f'При попытке передать заказ №{self.idOrder} произошла ошибка:', exc_info=ex)
+
+    def __api_put(self):
+        """Метод обновления данных о заказе на сервер"""
+        try:
+            data = self._order_schema.dumps(self)
+            response = requests.put(self._order_url, headers=self._content_type, data=data)
+
+            if response.status_code == 200:
+                dev_log.debug(f'Данные заказа №{self.idOrder} успешно обновлены на сервере')
+            else:
+                dev_log.warning(f'Не удалось обновить заказ №{self.idOrder} на сервере. Статус код {response.status_code}')
+
+        except Exception as ex:
+            dev_log.exception(f'При попытке обновить заказ №{self.idOrder} произошла ошибка:', exc_info=ex)
+
+    def save_on_server(self):
+        """Метод сохраняет данные о заказе на сервере, если это необходимо (заказ новый или был изменен"""
+        if not self._registered_on_server:
+            self.__api_post()
+        elif self.__is_updated():
+            self.__api_put()
+
+    def __get_hash_sum(self) -> int:
+        """Этот метод возвращает хэш сумму всех полей объекта которые хранятся на сервере"""
+        order_srt = ''.join([str(i_val) for i_name, i_val in self.__dict__.items() if not i_name.startswith('_')])
+        return hash(order_srt)
+
+    def __is_updated(self) -> bool:
+        """Если заказ был обновлен - метод вернет True"""
+        return self.__get_hash_sum() == self._control_hash
 
     def __repr__(self) -> str:
         """Метод выводит информацию о заказе при обращении к объекту заказа как к строчному объекту"""
@@ -270,6 +321,8 @@ class OrderSchema(Schema):
     products = fields.List(Field, required=True, allow_none=False)
     source = fields.Str(required=False, allow_none=True, dump_only=True, validate=[validate.OneOf(['buyer', 'seller'])])
     product_url = fields.Str(required=True, allow_none=False, load_only=True)
+    order_url = fields.Str(required=True, allow_none=False, load_only=True)
+    registered_on_server = fields.Boolean(required=True, allow_none=False, load_only=True)
 
     @post_load
     def create_order(self, data, **kwargs) -> Order:

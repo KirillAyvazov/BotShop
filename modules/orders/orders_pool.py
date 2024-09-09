@@ -29,7 +29,9 @@ class ShopperOrdersPool:
             if response.status_code == 200:
                 data = json.loads(response.text)
                 for i_dict in data:
+                    i_dict['order_url'] = self.__url_order
                     i_dict['product_url'] = self.__product_url
+                    i_dict['registered_on_server'] = True
                 return self.__order_schema.loads(json.dumps(data), many=True)
 
             dev_log.info(f'Не удалось получить заказы пользователя {self.__tgId} - статус код {response.status_code}')
