@@ -23,7 +23,7 @@ class ProductData:
     данного модуля.
     """
     def __init__(self, productsId: str, count: int, product_url: str):
-        self.productsId: str = productsId
+        self.productId: str = productsId
         self.count: int = count
         self.__product_url: str = product_url
         self.__content_type: Dict[str, str] = {'Content-Type': 'application/json'}
@@ -52,7 +52,7 @@ class ProductDataSchema(Schema):
         Класс - модель данных json получаемого от внешнего API при запросе продукта. Служит для валидации, сериализации
     и десериализации данных
     """
-    productsId = fields.Str(required=True, allow_none=False)
+    productId = fields.Str(required=True, allow_none=False)
     count = fields.Integer(required=True, allow_none=False)
     product_url = fields.Str(required=True, allow_none=False, load_only=True)
 
@@ -65,6 +65,7 @@ class ProductDataSchema(Schema):
 class Order:
     """Модель заказа"""
     def __init__(self,
+        tgId: Optional[int] = None,
         status: int = 0,
         idOrder: Optional[int] = None,
         datetimeCreation: Optional[str] = None,
@@ -80,6 +81,7 @@ class Order:
         order_url: Optional[str] = None,
         registered_on_server: bool = False
         ):
+        self.tgId = tgId
         self.idOrder = idOrder
         self.status: int = status
         self.datetimeCreation: str = datetimeCreation
@@ -224,6 +226,7 @@ class Basket(Order):
     """
 
     def __init__(self,
+                 tgId: Optional[int] = None,
                  status: int = 0,
                  idOrder: Optional[int] = None,
                  datetimeCreation: Optional[str] = None,
@@ -239,6 +242,7 @@ class Basket(Order):
                  order_url: Optional[str] = None,
                  ):
         super().__init__(
+            tgId,
             status,
             idOrder,
             datetimeCreation,
