@@ -88,7 +88,7 @@ class Order:
         self.datetimeCreation: str = datetimeCreation
         self.totalCost: int = totalCost
         self.delivery: bool = delivery
-        self.products: str = products
+        self.products: List[Product] = products
         self.datetimeUpdate: Optional[str] = datetimeUpdate
         self.userComment: Optional[str] = userComment
         self.sellerComment: Optional[str] = sellerComment
@@ -108,12 +108,7 @@ class Order:
 
     def __get_product_obj(self) -> None:
         """Метод преобразует полученные данные о товарах в список объектов - товаров"""
-        for i_dict in self.products:
-            i_dict: Dict[str, Any]
-            i_dict.update({"product_url": self._product_url})
-
-        list_product_data: List[ProductData] = self._product_data_schema.loads(json.dumps(self.products), many=True)
-        self.products: List[Product] = [i_product_data.product for i_product_data in list_product_data]
+        self.products: List[Product] = [i_product_data.product for i_product_data in self.products]
 
     def __api_post(self):
         """Метод передачи данных о заказе на сервер"""
