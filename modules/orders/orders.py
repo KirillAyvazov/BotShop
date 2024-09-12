@@ -241,6 +241,7 @@ class Basket(Order):
                  source: Optional[str] = None,
                  product_url: Optional[str] = None,
                  order_url: Optional[str] = None,
+                 registered_on_server: bool = False
                  ):
         super().__init__(
             tgId,
@@ -256,7 +257,8 @@ class Basket(Order):
             completionDate,
             source,
             product_url,
-            order_url
+            order_url,
+            registered_on_server
         )
 
     def add_product(self, product: Product, count: int) -> None:
