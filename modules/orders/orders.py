@@ -221,7 +221,8 @@ class Order:
         """
             Метод проверяет, возможно ли выполнить доставку заказа, т.е. все ли товары в заказе могут быть доставлены
         """
-        return all([i_product.delivery for i_product in self.products])
+        self.delivery = all([i_product.delivery for i_product in self.products])
+        return self.delivery
 
 
 class Basket(Order):
