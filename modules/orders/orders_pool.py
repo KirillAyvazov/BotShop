@@ -1,6 +1,7 @@
 from typing import List, Optional, Dict
 import requests
 import json
+from datetime import datetime
 
 
 from .orders import OrderSchema, Order, Basket
@@ -57,7 +58,8 @@ class ShopperOrdersPool:
             self.pool.remove(basket)
 
         else:
-            basket = Basket(tgId=self.__tgId ,product_url=self.__product_url, order_url=self.__url_order)
+            basket = Basket(tgId=self.__tgId ,product_url=self.__product_url, order_url=self.__url_order,
+                            datetimeCreation=datetime.now().strftime("%d.%m.%Y %H:%M"))
 
         return basket
 
@@ -68,4 +70,5 @@ class ShopperOrdersPool:
         """
         self.basket.create_new_order()
         self.pool.append(self.basket)
-        self.basket = Basket(tgId=self.__tgId, product_url=self.__product_url, order_url=self.__url_order)
+        self.basket = Basket(tgId=self.__tgId, product_url=self.__product_url, order_url=self.__url_order,
+                             datetimeCreation=datetime.now().strftime("%d.%m.%Y %H:%M"))

@@ -100,9 +100,10 @@ class Order:
         self._product_url: str = product_url
 
         self._registered_on_server: bool = registered_on_server
-        self._control_hash: int = self.__get_hash_sum()
 
         self.__get_product_obj()
+
+        self._control_hash: int = self.__get_hash_sum()
 
     def __get_product_obj(self) -> None:
         """Метод преобразует полученные данные о товарах в список объектов - товаров"""
@@ -115,7 +116,10 @@ class Order:
             response = requests.post(self._order_url, headers=self._content_type, data=data)
 
             if response.status_code == 200:
+                order_id_dict = response.json()
+                self.idOrder = order_id_dict.get('idOrder')
                 dev_log.debug(f'Данные заказа №{self.idOrder} успешно переданы на сервер')
+
             else:
                 dev_log.warning(f'Не удалось передать заказ №{self.idOrder} на сервер. Статус код {response.status_code}')
 
@@ -294,6 +298,9 @@ class Basket(Order):
 
     def __repr__(self) -> str:
         """Данный метод предоставляет текстовую информацию о корзине при обращении к ней как к текстовому объекту"""
+        if self.status != 0:
+            return super().__repr__()
+
         if len(self.products) > 0:
             text = list()
             text.append(f"Всего {len(self.products)} товаров на сумму {self.totalCost} рублей:\n")
