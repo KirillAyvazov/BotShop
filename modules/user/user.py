@@ -73,6 +73,7 @@ class User:
         self.category_index: int = 0
         self.product_viewed: Optional[Product] = None
         self.count_product: int = 1
+        self.back = False
 
         self.__restore_data_in_local_db()
 

@@ -222,6 +222,10 @@ class Order:
         self.delivery = all([i_product.delivery for i_product in self.products])
         return self.delivery
 
+    def get_title(self) -> str:
+        """Метод возвращает строку с номеров и статусом заказа"""
+        return f'Заказ №{self.idOrder} - {self.get_order_status()}'
+
 
 class Basket(Order):
     """
