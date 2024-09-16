@@ -105,6 +105,10 @@ class Shopper(User):
             if self.__orders:
                 return self.__orders.basket
 
+    def create_new_order(self) -> None:
+        """Метод создает новый заказ из корзины пользователя"""
+        self.__orders.create_new_order()
+
 
 class ShopperSchema(Schema):
     """Класс - схема данных предназначенная для валидации данных покупателя получаемых от внешнего API"""

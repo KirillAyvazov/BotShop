@@ -3,10 +3,8 @@
 помощи которого осуществляется хранение, доступ и редактирование заказов пользователя.
 """
 from marshmallow import Schema, fields, post_load, validate
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Union
 import requests
-from marshmallow.fields import Field
-import json
 from copy import deepcopy
 from datetime import datetime
 
@@ -110,7 +108,7 @@ class Order:
         """Метод преобразует полученные данные о товарах в список объектов - товаров"""
         self.products: List[Product] = [i_product_data.product for i_product_data in self.products]
 
-    def __api_post(self):
+    def _api_post(self):
         """Метод передачи данных о заказе на сервер"""
         try:
             data = self._order_schema.dumps(self)
@@ -124,7 +122,7 @@ class Order:
         except Exception as ex:
             dev_log.exception(f'При попытке передать заказ №{self.idOrder} произошла ошибка:', exc_info=ex)
 
-    def __api_put(self):
+    def _api_put(self):
         """Метод обновления данных о заказе на сервер"""
         try:
             data = self._order_schema.dumps(self)
@@ -141,9 +139,9 @@ class Order:
     def save_on_server(self):
         """Метод сохраняет данные о заказе на сервере, если это необходимо (заказ новый или был изменен"""
         if not self._registered_on_server:
-            self.__api_post()
+            self._api_post()
         elif self.__is_updated():
-            self.__api_put()
+            self._api_put()
 
     def __get_hash_sum(self) -> int:
         """Этот метод возвращает хэш сумму всех полей объекта которые хранятся на сервере"""
@@ -178,8 +176,8 @@ class Order:
         if self.userComment:
             text.append('Комментарий заказчика: {}'.format(self.userComment))
 
-        if self.sellerСomment:
-            text.append('Комментарий продавца: {}'.format(self.sellerСomment))
+        if self.sellerComment:
+            text.append('Комментарий продавца: {}'.format(self.sellerComment))
 
         text.append('Товары:')
         for index, i_product in enumerate(self.products):
@@ -315,6 +313,19 @@ class Basket(Order):
         for index, i_product in enumerate(self.products):
             list_product_name.append(f'{index+1}. {i_product.category}: {i_product.name} - {i_product.count} шт.')
         return list_product_name
+
+    def create_new_order(self) -> None:
+        """Метод создает из корзины новый заказ и отправляет его на сервер"""
+        self.datetimeCreation = datetime.now().strftime("%d.%m.%Y %H:%M")
+        self.datetimeUpdate = datetime.now().strftime("%d.%m.%Y %H:%M")
+        self.status = 1
+
+        if self._registered_on_server:
+            self._api_put()
+
+        else:
+            self._api_post()
+
 
 
 class OrderSchema(Schema):

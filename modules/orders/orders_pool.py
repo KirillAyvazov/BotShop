@@ -55,6 +55,17 @@ class ShopperOrdersPool:
         if len(basket_list) > 0:
             basket = basket_list[0]
             self.pool.remove(basket)
-            return basket
 
-        return Basket(tgId=self.__tgId ,product_url=self.__product_url, order_url=self.__url_order)
+        else:
+            basket = Basket(tgId=self.__tgId ,product_url=self.__product_url, order_url=self.__url_order)
+
+        return basket
+
+    def create_new_order(self) -> None:
+        """
+            Метод создаёт новый заказ. Корзину отправляет на сервер в качестве нового заказа, её добавляет в список
+        заказов, и создает новую корзину
+        """
+        self.basket.create_new_order()
+        self.pool.append(self.basket)
+        self.basket = Basket(tgId=self.__tgId, product_url=self.__product_url, order_url=self.__url_order)
