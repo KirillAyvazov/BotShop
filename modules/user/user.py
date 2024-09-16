@@ -72,6 +72,7 @@ class User:
         self.order_index: int = 0
         self.category_index: int = 0
         self.product_viewed: Optional[Product] = None
+        self.order_viewed: Optional[Product] = None
         self.count_product: int = 1
         self.back = False
 

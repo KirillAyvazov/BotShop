@@ -226,6 +226,11 @@ class Order:
         """Метод возвращает строку с номеров и статусом заказа"""
         return f'Заказ №{self.idOrder} - {self.get_order_status()}'
 
+    def cancel_order(self) -> None:
+        """Метод отменяет заказ"""
+        self.status = 9
+        self.save_on_server()
+
 
 class Basket(Order):
     """
