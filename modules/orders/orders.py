@@ -148,6 +148,9 @@ class Order:
     def __get_hash_sum(self) -> int:
         """Этот метод возвращает хэш сумму всех полей объекта которые хранятся на сервере"""
         order_srt = ''.join([str(i_val) for i_name, i_val in self.__dict__.items() if not i_name.startswith('_')])
+        order_products = ''.join([''.join([str(i_product), str(i_product.count)]) for i_product in self.products])
+        order_srt = ''.join([order_srt, order_products])
+
         return hash(order_srt)
 
     def __is_updated(self) -> bool:

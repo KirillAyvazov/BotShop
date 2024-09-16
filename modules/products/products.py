@@ -33,7 +33,7 @@ class Product:
 
     def __eq__(self, other):
         """Метод сравнения двух продуктов по их id"""
-        return self.productsId == getattr(other, "productId", None)
+        return self.productsId == getattr(other, "productsId", None)
 
     @classmethod
     def __get_bytes_by_url(cls, url: str) -> bytes:
