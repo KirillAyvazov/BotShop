@@ -155,7 +155,7 @@ class Order:
 
     def __is_updated(self) -> bool:
         """Если заказ был обновлен - метод вернет True"""
-        return self.__get_hash_sum() == self._control_hash
+        return not self.__get_hash_sum() == self._control_hash
 
     def __repr__(self) -> str:
         """Метод выводит информацию о заказе при обращении к объекту заказа как к строчному объекту"""
@@ -216,6 +216,12 @@ class Order:
     def is_actual(self):
         """Метод возвращает True если заказ всё еще актуален"""
         return self.status not in [0, 7, 8, 9]
+
+    def possibility_delivery(self) -> bool:
+        """
+            Метод проверяет, возможно ли выполнить доставку заказа, т.е. все ли товары в заказе могут быть доставлены
+        """
+        return all([i_product.delivery for i_product in self.products])
 
 
 class Basket(Order):
