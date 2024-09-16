@@ -258,7 +258,7 @@ class Basket(Order):
 
     def add_product(self, product: Product, count: int) -> None:
         """Метод добавляет в заказ новый продукт"""
-        product_in_basket = list(filter(lambda i_product: i_product.__dict__ == product.__dict__, self.products))
+        product_in_basket = list(filter(lambda i_product: i_product == product, self.products))
 
         if len(product_in_basket) > 0:
             new_product: Product = product_in_basket[0]
