@@ -88,10 +88,10 @@ class User:
         user_table = session.get(UserTable, self.tgId)
 
         if user_table:
-            for i_elem in [i_elem for i_elem in user_table.message_id_user_to_bot.split(',') if isinstance(i_elem, int)]:
+            for i_elem in [i_elem for i_elem in user_table.message_id_user_to_bot.split(',')]:
                 self.__message_id_user_to_bot.put(i_elem)
 
-            for i_elem in [i_elem for i_elem in user_table.message_id_bot_to_user.split(',') if isinstance(i_elem, int)]:
+            for i_elem in [i_elem for i_elem in user_table.message_id_bot_to_user.split(',')]:
                 self.__message_id_bot_to_user.put(i_elem)
 
             self.last_session = datetime.strptime(str(user_table.last_session), "%Y-%m-%d %H:%M:%S.%f")
