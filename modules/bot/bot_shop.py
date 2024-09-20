@@ -51,8 +51,9 @@ class BotShop(TeleBot):
                     self.delete_message(message.chat.id, i_message_id)
 
                 except ApiTelegramException as ex:
-                    dev_log.exception('Не удалось удалить сообщение бота в чате пользователя {}'.format(message.chat.id),
-                                         exc_info=ex)
+                    pass
+                    #dev_log.exception('Не удалось удалить сообщение бота в чате пользователя {}'.format(message.chat.id),
+                    #                     exc_info=ex)
 
     def send_message(self, *args, **kwargs) -> Message:
         """
