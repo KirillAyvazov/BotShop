@@ -130,7 +130,9 @@ class User:
         сущности.
         """
         queue_message_id: Queue[int] = self.__object_control(object_name)
-        queue_message_id.put(message_id)
+
+        if message_id not in self.__recently_deleted_messages:
+            queue_message_id.put(message_id)
 
     def pop_message(self, object_name: ObjectName, message_limit: int) -> List[int]:
         """
