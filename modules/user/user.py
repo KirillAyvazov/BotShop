@@ -147,10 +147,13 @@ class User:
 
         list_messages_delete = []
         while queue_message_id.qsize() > message_limit:
-            list_messages_delete.append(queue_message_id.get())
+            message_id = queue_message_id.get()
+
+            if message_id not in self.__recently_deleted_messages:
+                list_messages_delete.append(queue_message_id.get())
 
         self.__recently_deleted_messages.extend(list_messages_delete)
-        self.__recently_deleted_messages = self.__recently_deleted_messages[-10:]
+        self.__recently_deleted_messages = self.__recently_deleted_messages[-15:]
 
         return list_messages_delete
 
