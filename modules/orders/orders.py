@@ -10,9 +10,11 @@ from datetime import datetime
 
 from ..products import Product, ProductSchema
 from ..logger import get_development_logger
+from ..utils import ProjectCache
 
 
 dev_log = get_development_logger(__name__)
+project_cache = ProjectCache()
 
 
 class ProductData:
@@ -27,23 +29,24 @@ class ProductData:
         self.__product_url: str = product_url
         self.__content_type: Dict[str, str] = {'Content-Type': 'application/json'}
         self.__product_schema = ProductSchema()
-        self.product: Product = self.__api_get_product()
+        self.product: Product = self.__api_get_product(self.productsId)
 
-    def __api_get_product(self) -> Product:
+    @project_cache
+    def __api_get_product(self, products_id) -> Product:
         """Данный метод осуществляет запрос к внешнему API для получения информации о товаре по указанному id товара"""
         try:
-            response = requests.get('/'.join([self.__product_url, self.productsId]), headers=self.__content_type)
+            response = requests.get('/'.join([self.__product_url, products_id]), headers=self.__content_type)
 
             if response.status_code == 200:
                 product: Product = self.__product_schema.loads(response.text)
                 product.count = self.count
                 return product
 
-            dev_log.debug(f'Не удалось получить данные о товаре {self.productsId} при загрузке заказа: статус код '
+            dev_log.debug(f'Не удалось получить данные о товаре {products_id} при загрузке заказа: статус код '
                           f'{response.status_code}')
 
         except Exception as ex:
-            dev_log.exception(f'При попытке получить данные товара {self.productsId} произошла ошибка:', exc_info=ex)
+            dev_log.exception(f'При попытке получить данные товара {products_id} произошла ошибка:', exc_info=ex)
 
 
 class ProductDataSchema(Schema):
@@ -118,6 +121,7 @@ class Order:
             if response.status_code == 200:
                 order_id_dict = response.json()
                 self.idOrder = order_id_dict.get('idOrder')
+                self._registered_on_server = True
                 dev_log.debug(f'Данные заказа №{self.idOrder} успешно переданы на сервер')
 
             else:
@@ -134,6 +138,8 @@ class Order:
 
             if response.status_code == 200:
                 dev_log.debug(f'Данные заказа №{self.idOrder} успешно обновлены на сервере')
+                self._control_hash = self.__get_hash_sum()
+
             else:
                 dev_log.warning(f'Не удалось обновить заказ №{self.idOrder} на сервере. Статус код {response.status_code}')
 

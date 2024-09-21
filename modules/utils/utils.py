@@ -2,9 +2,11 @@
     Данный модуль содержит вспомогательные функции, используемые в других модулях проекта и решающие
 узко-направленные задачи
 """
-from typing import Callable, Optional
+from typing import Callable, Optional, Any
 import functools
 from threading import Thread
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 
 
 def execute_in_new_thread(_func: Optional[Callable] = None, *, daemon: bool = False) -> Callable:
@@ -23,3 +25,42 @@ def execute_in_new_thread(_func: Optional[Callable] = None, *, daemon: bool = Fa
     if _func is None:
         return decorator
     return decorator(_func)
+
+
+class ProjectCache:
+    """
+        Класс - модель кэша данных. Позволяет сохранять полученную от API информацию, которая может быть
+    переиспользована некоторое время. Используется в качестве декоратора.
+    """
+    __memory = dict()
+
+    @dataclass
+    class Data:
+        result: Any
+        saving_time: datetime = datetime.now()
+
+    def __call__(self, func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapped(*args, **kwargs) -> Any:
+            key = ''.join([*[str(i_arg) for i_arg in args], *kwargs.keys()])
+            data = self.__get_data(key)
+
+            if data is None:
+                data = self.Data(func(*args, **kwargs))
+                self.__memory[key] = data
+
+            return data.result
+
+        return wrapped
+
+    def __get_data(self, key: str) -> Optional[Any]:
+        """
+            Метод осуществляет получение данных из кэша контроль времени хранения данных. Время хранения данных не
+        должно превышать 1 сутки.
+        """
+        data = self.__memory.get(key, None)
+
+        if data:
+            if datetime.now() - data.saving_time < timedelta(days=1):
+                return data
+            self.__memory.pop(key)

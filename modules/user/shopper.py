@@ -94,14 +94,14 @@ class Shopper(User):
     def get_orders(self) -> List[Order]:
         """При обращении к объекту пула заказов как к вызываемому объекту будет возвращен список заказов"""
         time_start = time.time()
-        while time.time() - time_start < 4:
+        while time.time() - time_start < 10:
             if self.__orders:
                 return self.__orders()
 
     def get_basket(self) -> Basket:
         """Метод возвращает корзину пользователя, представляющую собой заказ со статусом 0"""
         time_start = time.time()
-        while time.time() - time_start < 4:
+        while time.time() - time_start < 10:
             if self.__orders:
                 return self.__orders.basket
 
