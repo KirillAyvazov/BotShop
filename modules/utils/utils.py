@@ -2,12 +2,18 @@
     Данный модуль содержит вспомогательные функции, используемые в других модулях проекта и решающие
 узко-направленные задачи
 """
-from typing import Callable, Optional, Any
+from typing import Callable, Optional, Any, Union, List, Tuple, Dict
 import functools
-from threading import Thread
+from threading import Thread, Semaphore
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import time
+from sys import getsizeof
+
+from ..logger import get_development_logger
+
+
+dev_log = get_development_logger(__name__)
 
 
 def execute_in_new_thread(_func: Optional[Callable] = None, *, daemon: bool = False) -> Callable:
@@ -33,38 +39,51 @@ class ProjectCache:
         Класс - модель кэша данных. Позволяет сохранять полученную от API информацию, которая может быть
     переиспользована некоторое время. Используется в качестве декоратора.
     """
-    __memory = dict()
+    def __init__(self):
+        self.__memory = dict()
 
     @dataclass
     class Data:
         result: Any
-        saving_time: datetime = datetime.now()
+        saving_time: datetime
 
     def __call__(self, func: Callable) -> Callable:
+        self.__data_control()
+
         @functools.wraps(func)
         def wrapped(*args, **kwargs) -> Any:
-            key = ''.join([*[str(i_arg) for i_arg in args], *kwargs.keys()])
-            data = self.__get_data(key)
+            key = ''.join([func.__name__,
+                           *[str(i_arg) for i_arg in args if isinstance(i_arg, Union[str, int, List, Tuple, Dict, float])],
+                           *kwargs.keys()])
+            data = self.__memory.get(key, None)
 
             if data is None:
-                data = self.Data(func(*args, **kwargs))
-                self.__memory[key] = data
+                data = self.Data(func(*args, **kwargs), datetime.now())
+                if not data.result is None:
+                    self.__memory[key] = data
 
             return data.result
 
         return wrapped
 
-    def __get_data(self, key: str) -> Optional[Any]:
+    @execute_in_new_thread(daemon=True)
+    def __data_control(self) -> None:
         """
-            Метод осуществляет получение данных из кэша контроль времени хранения данных. Время хранения данных не
-        должно превышать 1 сутки.
+            Метод осуществляет контроль "свежести" данных в кэше. Если данные хранятся в кэше больше установленного
+        времени - они удаляются.
         """
-        data = self.__memory.get(key, None)
+        while True:
+            time.sleep(3600)
 
-        if data:
-            if datetime.now() - data.saving_time < timedelta(days=1):
-                return data
-            self.__memory.pop(key)
+            start_size = getsizeof(self.__memory)
+
+            for i_key, i_data in list(self.__memory.items()):
+                if datetime.now() - i_data.saving_time > timedelta(seconds=43200):
+                    with Semaphore():
+                        self.__memory.pop(i_key)
+
+            new_size = getsizeof(self.__memory)
+            dev_log.debug(f"Размер кэша {self.__name__} до/после очистки: {start_size}/{new_size}")
 
 
 def timer(func: Callable) -> Optional[Any]:

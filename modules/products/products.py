@@ -16,7 +16,7 @@ from ..logger import get_development_logger
 from ..utils import execute_in_new_thread, ProjectCache
 
 dev_log = get_development_logger(__name__)
-project_cache = ProjectCache()
+images_cache = ProjectCache()
 
 
 class Product:
@@ -37,7 +37,7 @@ class Product:
         return self.productsId == getattr(other, "productsId", None)
 
     @classmethod
-    @project_cache
+    @images_cache
     def __get_bytes_by_url(cls, url: str) -> bytes:
         """
             Данный метод вспомогательный, используется в методе get_list_images и служит для получения байтов

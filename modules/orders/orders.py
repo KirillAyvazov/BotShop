@@ -14,7 +14,7 @@ from ..utils import ProjectCache
 
 
 dev_log = get_development_logger(__name__)
-project_cache = ProjectCache()
+product_cache = ProjectCache()
 
 
 class ProductData:
@@ -31,7 +31,7 @@ class ProductData:
         self.__product_schema = ProductSchema()
         self.product: Product = self.__api_get_product(self.productsId)
 
-    @project_cache
+    @product_cache
     def __api_get_product(self, products_id) -> Product:
         """Данный метод осуществляет запрос к внешнему API для получения информации о товаре по указанному id товара"""
         try:
