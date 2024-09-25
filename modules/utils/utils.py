@@ -7,6 +7,7 @@ import functools
 from threading import Thread
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+import time
 
 
 def execute_in_new_thread(_func: Optional[Callable] = None, *, daemon: bool = False) -> Callable:
@@ -64,3 +65,14 @@ class ProjectCache:
             if datetime.now() - data.saving_time < timedelta(days=1):
                 return data
             self.__memory.pop(key)
+
+
+def timer(func: Callable) -> Optional[Any]:
+    """Декоратор - таймер. Отображает время выполнения декорируемой функции"""
+    @functools.wraps(func)
+    def wrapped(*args, **kwargs):
+        time_start = time.time()
+        result = func(*args, **kwargs)
+        print(f"Время выполнения функции {func.__name__} - {round(time.time()-time_start, 3)}")
+        return result
+    return wrapped

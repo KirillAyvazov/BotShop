@@ -3,9 +3,9 @@ import requests
 import json
 from datetime import datetime
 
-
 from .orders import OrderSchema, Order, Basket
 from ..logger import get_development_logger
+from ..utils import timer
 
 
 dev_log = get_development_logger(__name__)
@@ -21,6 +21,7 @@ class ShopperOrdersPool:
         self.pool: Optional[List[Order]] = self.__api_get_orders()
         self.basket: Optional[Basket] = self.__basket_search()
 
+    @timer
     def __api_get_orders(self) -> List[Order]:
         """Метод получает от внешнего API список заказов"""
         try:
