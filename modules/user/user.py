@@ -13,6 +13,8 @@ from typing import List, Literal, Dict, Any, Callable, Optional, Tuple
 import os
 from queue import Queue, LifoQueue
 from telebot.types import Message
+import requests
+import json
 
 from ..logger import get_development_logger
 from ..products import Product
@@ -196,3 +198,60 @@ class User:
         """
         func: Callable = self.__queue_of_steps.get()
         return func(message)
+
+
+class UserPool:
+    """
+        Данный является родительским для классов ShopperPool и SellerPool и является моделью объекта,
+    предназначенного для хранения коллекции пользователей в одном месте, предоставления быстрого доступа к
+    любому объекту пользователя, а так же для контроля актуальности данных пользователей. Через объект этого класса должно
+    осуществляться любое взаимодействие с объектами пользователей. Так же объект этого класса осуществляет взаимодействие
+    с внешним API, удаленно хранящим данные пользователей
+    """
+    def __init__(self, user_url: str, orders_url: str, product_url: str, user_schema, user_class,
+                 session_time: Optional[int] = None):
+        self._user_url: str = user_url
+        self._orders_url: str = orders_url
+        self._product_url: str = product_url
+        self._user_schema = user_schema
+        self.__user_class = user_class
+        self._content_type: Dict[str, str] = {'Content-Type': 'application/json'}
+        self._pool: Dict[int: User] = dict()
+        self._session_time: Optional[int] = session_time
+        self._bot = None
+
+    def get(self, tg_id: int) -> User:
+        """
+            Метод возвращает объект пользователя из пула пользователей по-указанному id. Если такового там нет,
+        метод попытается получить информацию о покупателе из внешнего API и из локальной базы данных. Если и там
+        информации о покупателе нет - будет создан и возвращен новый объект пользователя
+        """
+        user = self._pool.get(tg_id, None)
+
+        if not user:
+            user = self._api_get(tg_id)
+            self._pool[tg_id] = user
+
+        if not user:
+            user = self.__user_class(tg_id, self._orders_url, self._product_url)
+            self._pool[tg_id] = user
+
+        user.update_activity_time()
+
+        return user
+
+    def _api_get(self, tg_id: int) -> Optional[User]:
+        """Метод реализует получение данных пользователя от внешнего API"""
+        try:
+            response = requests.get('/'.join([self._user_url, str(tg_id)]), headers=self._content_type)
+            if response.status_code == 200:
+                data = json.loads(response.text)
+                data["orders_url"] = self._orders_url
+                data["product_url"] = self._product_url
+                return self._user_schema.loads(json.dumps(data))
+            dev_log.info('Не удалось получить от сервера данные пользователя {}'.format(tg_id))
+
+        except Exception as ex:
+            dev_log.exception('При попытке получить от сервера данные пользователя {} произошла ошибка:'.format(tg_id),
+                              exc_info=ex)
+

@@ -11,9 +11,7 @@ from datetime import timedelta, datetime
 from threading import Semaphore
 import json
 
-from sqlalchemy.testing.pickleable import Order
-
-from .user import User
+from .user import User, UserPool
 from ..orders import ShopperOrdersPool, Order, Basket
 from ..logger import get_development_logger
 from ..products import Product
@@ -94,14 +92,14 @@ class Shopper(User):
     def get_orders(self) -> List[Order]:
         """При обращении к объекту пула заказов как к вызываемому объекту будет возвращен список заказов"""
         time_start = time.time()
-        while time.time() - time_start < 10:
+        while time.time() - time_start < 15:
             if self.__orders:
                 return self.__orders()
 
     def get_basket(self) -> Basket:
         """Метод возвращает корзину пользователя, представляющую собой заказ со статусом 0"""
         time_start = time.time()
-        while time.time() - time_start < 10:
+        while time.time() - time_start < 15:
             if self.__orders:
                 return self.__orders.basket
 
@@ -128,7 +126,7 @@ class ShopperSchema(Schema):
         return shopper
 
 
-class ShopperPool:
+class ShopperPool(UserPool):
     """
         Этот класс предназначен для хранения коллекции покупателей в одном месте, предоставления быстрого доступа к
     любому объекту покупателя, а так же для контроля актуальности данных покупателей. Через объект этого класса должно
@@ -136,43 +134,41 @@ class ShopperPool:
     с внешним API, удаленно хранящим данные покупателей
     """
     def __init__(self, shopper_url: str, orders_url: str, product_url: str, session_time: Optional[int] = None):
-        self.__shopper_url: str = shopper_url
-        self.__orders_url: str = orders_url
-        self.__product_url: str = product_url
-        self.__content_type: Dict[str, str] = {'Content-Type': 'application/json'}
+        super().__init__(shopper_url, orders_url, product_url, self.__class__, session_time)
         self.__shopper_schema: ShopperSchema = ShopperSchema()
-        self.__pool: Dict[int: Shopper] = dict()
-        self.__session_time: Optional[int] = session_time
-        self.__bot = None
 
-    def get(self, tg_id: int) -> Shopper:
+
+
+    def gett(self, tg_id: int) -> Shopper:
         """
             Метод возвращает объект покупателя из пула покупателей по-указанному id. Если такового там нет,
         метод попытается получить информацию о покупателе из внешнего API и из локальной базы данных. Если и там
         информации о покупателе нет - будет создан и возвращен новый объект покупателя.
         """
-        shopper = self.__pool.get(tg_id, None)
+        shopper = self._pool.get(tg_id, None)
+
+
 
         if not shopper:
-            shopper = self.__api_get(tg_id)
-            self.__pool[tg_id] = shopper
+            shopper = self.__api_gett(tg_id)
+            self._pool[tg_id] = shopper
 
         if not shopper:
-            shopper = Shopper(tgId=tg_id, orders_url=self.__orders_url, product_url=self.__product_url)
-            self.__pool[tg_id] = shopper
+            shopper = Shopper(tgId=tg_id, orders_url=self._orders_url, product_url=self._product_url)
+            self._pool[tg_id] = shopper
 
         shopper.update_activity_time()
 
         return shopper
 
-    def __api_get(self, tg_id: int) -> Optional[Shopper]:
+    def __api_gett(self, tg_id: int) -> Optional[Shopper]:
         """Метод реализует получение данных пользователя от внешнего API"""
         try:
-            response = requests.get('/'.join([self.__shopper_url, str(tg_id)]), headers=self.__content_type)
+            response = requests.get('/'.join([self._user_url, str(tg_id)]), headers=self._content_type)
             if response.status_code == 200:
                 data = json.loads(response.text)
-                data["orders_url"] = self.__orders_url
-                data["product_url"] = self.__product_url
+                data["orders_url"] = self._orders_url
+                data["product_url"] = self._product_url
                 return self.__shopper_schema.loads(json.dumps(data))
             dev_log.info('Не удалось получить от сервера данные пользователя {}'.format(tg_id))
 
@@ -184,7 +180,7 @@ class ShopperPool:
         """Метод осуществляет сохранение измененных данных покупателя на внешнем сервере"""
         try:
             data = self.__shopper_schema.dumps(shopper)
-            response = requests.put(self.__shopper_url, data=data, headers=self.__content_type)
+            response = requests.put(self._user_url, data=data, headers=self._content_type)
             if response.status_code == 200:
                 dev_log.debug('Данные пользователя {} успешно обновлены на сервере'.format(shopper.tgId))
 
@@ -195,7 +191,7 @@ class ShopperPool:
         """Метод осуществляет добавление нового покупателя на внешний сервер"""
         try:
             data = self.__shopper_schema.dumps(shopper)
-            response = requests.post(self.__shopper_url, data=data, headers=self.__content_type)
+            response = requests.post(self._user_url, data=data, headers=self._content_type)
             if response.status_code == 200:
                 dev_log.debug('Данные нового пользователя {} успешно добавлены на сервер'.format(shopper.tgId))
 
@@ -211,8 +207,8 @@ class ShopperPool:
         делается пост запрос с его данными на сервер.
         """
         for i_shopper in list_shoppers:
-            if self.__bot:
-                self.__bot.close_session(i_shopper.tgId)
+            if self._bot:
+                self._bot.close_session(i_shopper.tgId)
 
             i_shopper.saving_to_local_db()
 
@@ -235,21 +231,21 @@ class ShopperPool:
         пользователей. Если в пуле пользователей есть объекты, взаимодействие с которыми не осуществлялось установленное
         время - они будут удалены из оперативной памяти.
         """
-        time_delta = timedelta(seconds=self.__session_time)
-        while self.__session_time:
-            time.sleep(self.__session_time // 2)
+        time_delta = timedelta(seconds=self._session_time)
+        while self._session_time:
+            time.sleep(self._session_time // 2)
             list_shopper_to_delete = list(filter(lambda i_shopper: datetime.now() - i_shopper.last_session > time_delta,
-                                                 self.__pool.values()))
+                                                 self._pool.values()))
 
             self.__save_shoppers_data(list_shopper_to_delete)
 
-            new_pool = {i_id: i_shopper for i_id, i_shopper in self.__pool.items()
+            new_pool = {i_id: i_shopper for i_id, i_shopper in self._pool.items()
                         if i_shopper not in list_shopper_to_delete}
 
             with Semaphore():
-                initial_pool_size = sys.getsizeof(self.__pool)
-                self.__pool = new_pool
-                final_size_pool = sys.getsizeof(self.__pool)
+                initial_pool_size = sys.getsizeof(self._pool)
+                self._pool = new_pool
+                final_size_pool = sys.getsizeof(self._pool)
 
             dev_log.debug('Размер пула покупателей до/после очищения: {}/{}'.format(initial_pool_size,
                                                                                     final_size_pool))
@@ -261,4 +257,4 @@ class ShopperPool:
         объект телеграмм бота используется в методе __save_shoppers_data для отправки сообщения пользователю о
         завершении сессии, поэтому у передаваемого объекта бота должен быть реализован метод close_session
         """
-        self.__bot = bot
+        self._bot = bot

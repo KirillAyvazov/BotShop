@@ -26,10 +26,11 @@ class SellerOrdersPool:
         self.__get_orders()
 
     @timer
-    def __api_get_orders(self, status: str) -> List[Order]:
+    def __api_get_orders(self, status: str, start: int = 1, stop: int = 100) -> List[Order]:
         """Метод получает от внешнего API список заказов по указанному статусу"""
         try:
-            response = requests.get('/'.join([self.__url_order, status]), headers=self.__content_type)
+            response = requests.get('/'.join([self.__url_order, status, str(start), str(stop)]),
+                                    headers=self.__content_type)
 
             if response.status_code == 200:
                 data = json.loads(response.text)
@@ -56,8 +57,11 @@ class SellerOrdersPool:
         результатов выполнения метода __api_get_orders соответствующим атрибутам объекта
         """
         thread_pool = ThreadPool(2)
-        result = thread_pool.map_async(self.__api_get_orders, ["new", "current"])
+        result = thread_pool.map(self.__api_get_orders, ["new", "current"])
         thread_pool.close()
         thread_pool.join()
-        print(result)
+        self.new = result[0]
+        self.current = result[1]
+
+
 
