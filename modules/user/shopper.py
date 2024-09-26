@@ -133,68 +133,7 @@ class ShopperPool(UserPool):
         super().__init__(shopper_url, orders_url, product_url, ShopperSchema, self.__class__, session_time)
         self.__shopper_schema: ShopperSchema = ShopperSchema()
 
-
-
-    def gett_delete(self, tg_id: int) -> Shopper:
-        """
-            Метод возвращает объект покупателя из пула покупателей по-указанному id. Если такового там нет,
-        метод попытается получить информацию о покупателе из внешнего API и из локальной базы данных. Если и там
-        информации о покупателе нет - будет создан и возвращен новый объект покупателя.
-        """
-        shopper = self._pool.get(tg_id, None)
-
-
-
-        if not shopper:
-            shopper = self.__api_gett(tg_id)
-            self._pool[tg_id] = shopper
-
-        if not shopper:
-            shopper = Shopper(tgId=tg_id, orders_url=self._orders_url, product_url=self._product_url)
-            self._pool[tg_id] = shopper
-
-        shopper.update_activity_time()
-
-        return shopper
-
-    def __api_gett_delete(self, tg_id: int) -> Optional[Shopper]:
-        """Метод реализует получение данных пользователя от внешнего API"""
-        try:
-            response = requests.get('/'.join([self._user_url, str(tg_id)]), headers=self._content_type)
-            if response.status_code == 200:
-                data = json.loads(response.text)
-                data["orders_url"] = self._orders_url
-                data["product_url"] = self._product_url
-                return self.__shopper_schema.loads(json.dumps(data))
-            dev_log.info('Не удалось получить от сервера данные пользователя {}'.format(tg_id))
-
-        except Exception as ex:
-            dev_log.exception('При попытке получить от сервера данные пользователя {} произошла ошибка:'.format(tg_id),
-                              exc_info=ex)
-
-    def __api_putt_delete(self, shopper: Shopper) -> None:
-        """Метод осуществляет сохранение измененных данных покупателя на внешнем сервере"""
-        try:
-            data = self.__shopper_schema.dumps(shopper)
-            response = requests.put(self._user_url, data=data, headers=self._content_type)
-            if response.status_code == 200:
-                dev_log.debug('Данные пользователя {} успешно обновлены на сервере'.format(shopper.tgId))
-
-        except Exception as ex:
-            dev_log.exception('Не удалось обновить данные пользователя {} из-за ошибки:', exc_info=ex)
-
-    def __api_postt_delete(self, shopper: Shopper) -> None:
-        """Метод осуществляет добавление нового покупателя на внешний сервер"""
-        try:
-            data = self.__shopper_schema.dumps(shopper)
-            response = requests.post(self._user_url, data=data, headers=self._content_type)
-            if response.status_code == 200:
-                dev_log.debug('Данные нового пользователя {} успешно добавлены на сервер'.format(shopper.tgId))
-
-        except Exception as ex:
-            dev_log.exception('Не удалось добавить данные нового пользователя {} из-за ошибки:', exc_info=ex)
-
-    def __save_user_data(self, list_shoppers: List[Shopper]) -> None:
+    def _save_user_data(self, list_shoppers: List[Shopper]) -> None:
         """
             Данный метод является вспомогательным и используется в методе data_control. Для каждого пользователя в
         переданном списке этот метод отправляет сообщение об окончании сессии при помощи телеграмм бота, сохраняет
@@ -218,33 +157,3 @@ class ShopperPool(UserPool):
                 self._api_put(i_shopper)
             elif not i_shopper.registered_on_server:
                 self._api_post(i_shopper)
-
-
-    @execute_in_new_thread(daemon=False)
-    def data_controll_delete(self) -> None:
-        """
-            Этот метод - бесконечный цикл выполняемый в отдельном потоке - служит для контроля востребованности данных
-        пользователей. Если в пуле пользователей есть объекты, взаимодействие с которыми не осуществлялось установленное
-        время - они будут удалены из оперативной памяти.
-        """
-        time_delta = timedelta(seconds=self._session_time)
-        while self._session_time:
-            time.sleep(self._session_time // 2)
-            list_shopper_to_delete = list(filter(lambda i_shopper: datetime.now() - i_shopper.last_session > time_delta,
-                                                 self._pool.values()))
-
-            self.__save_user_data(list_shopper_to_delete)
-
-            new_pool = {i_id: i_shopper for i_id, i_shopper in self._pool.items()
-                        if i_shopper not in list_shopper_to_delete}
-
-            with Semaphore():
-                initial_pool_size = sys.getsizeof(self._pool)
-                self._pool = new_pool
-                final_size_pool = sys.getsizeof(self._pool)
-
-            dev_log.debug('Размер пула покупателей до/после очищения: {}/{}'.format(initial_pool_size,
-                                                                                    final_size_pool))
-            new_pool = None
-
-

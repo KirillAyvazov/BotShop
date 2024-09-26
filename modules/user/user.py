@@ -302,12 +302,11 @@ class UserPool:
         self._bot = bot
 
     @abstractmethod
-    def __save_user_data(self, list_user: List[User]) -> None:
+    def _save_user_data(self, list_user: List[User]) -> None:
         """
             Данный метод является абстрактным и используется для гарантии реализации данного метода в
         дочерних классах.
         """
-        print("Выполняется метод родителя")
         pass
 
     @execute_in_new_thread(daemon=False)
@@ -323,7 +322,7 @@ class UserPool:
             list_user_to_delete = list(filter(lambda i_user: datetime.now() - i_user.last_session > time_delta,
                                                  self._pool.values()))
 
-            self.__save_user_data(list_user_to_delete)
+            self._save_user_data(list_user_to_delete)
 
             new_pool = {i_id: i_user for i_id, i_user in self._pool.items()
                         if i_user not in list_user_to_delete}
