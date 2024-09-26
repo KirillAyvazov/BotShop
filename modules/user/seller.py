@@ -24,11 +24,7 @@ class Seller(User):
                  nickname: Optional[str] = None,
                  phoneNumber: Optional[str] = None,
                  ):
-        super().__init__(tgId, orders_url, product_url)
-        self.firstName: Optional[str] = firstName
-        self.lastName: Optional[str] = lastName
-        self.nickname: Optional[str] = nickname
-        self.phoneNumber: Optional[str] = phoneNumber
+        super().__init__(tgId, orders_url, product_url, firstName, lastName, nickname, phoneNumber)
         self.orders: Optional[SellerOrdersPool] = None
 
     def __get_active_orders(self) -> None:

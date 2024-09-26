@@ -36,11 +36,7 @@ class Shopper(User):
                  phoneNumber: Optional[str] = None,
                  homeAddress: Optional[str] = None
                  ):
-        super().__init__(tgId, orders_url, product_url)
-        self.firstName: Optional[str] = firstName
-        self.lastName: Optional[str] = lastName
-        self.nickname: Optional[str] = nickname
-        self.phoneNumber: Optional[str] = phoneNumber
+        super().__init__(tgId, orders_url, product_url, firstName, lastName, nickname, phoneNumber)
         self.homeAddress: Optional[str] = homeAddress
         self.__orders: Optional[ShopperOrdersPool] = None
         self.__personal_data_cache = self.__get_personal_data_cache()
@@ -139,7 +135,7 @@ class ShopperPool(UserPool):
 
 
 
-    def gett(self, tg_id: int) -> Shopper:
+    def gett_delete(self, tg_id: int) -> Shopper:
         """
             Метод возвращает объект покупателя из пула покупателей по-указанному id. Если такового там нет,
         метод попытается получить информацию о покупателе из внешнего API и из локальной базы данных. Если и там
@@ -161,7 +157,7 @@ class ShopperPool(UserPool):
 
         return shopper
 
-    def __api_gett(self, tg_id: int) -> Optional[Shopper]:
+    def __api_gett_delete(self, tg_id: int) -> Optional[Shopper]:
         """Метод реализует получение данных пользователя от внешнего API"""
         try:
             response = requests.get('/'.join([self._user_url, str(tg_id)]), headers=self._content_type)
@@ -176,7 +172,7 @@ class ShopperPool(UserPool):
             dev_log.exception('При попытке получить от сервера данные пользователя {} произошла ошибка:'.format(tg_id),
                               exc_info=ex)
 
-    def __api_put(self, shopper: Shopper) -> None:
+    def __api_putt_delete(self, shopper: Shopper) -> None:
         """Метод осуществляет сохранение измененных данных покупателя на внешнем сервере"""
         try:
             data = self.__shopper_schema.dumps(shopper)
@@ -187,7 +183,7 @@ class ShopperPool(UserPool):
         except Exception as ex:
             dev_log.exception('Не удалось обновить данные пользователя {} из-за ошибки:', exc_info=ex)
 
-    def __api_post(self, shopper: Shopper) -> None:
+    def __api_postt_delete(self, shopper: Shopper) -> None:
         """Метод осуществляет добавление нового покупателя на внешний сервер"""
         try:
             data = self.__shopper_schema.dumps(shopper)
@@ -198,7 +194,7 @@ class ShopperPool(UserPool):
         except Exception as ex:
             dev_log.exception('Не удалось добавить данные нового пользователя {} из-за ошибки:', exc_info=ex)
 
-    def __save_shoppers_data(self, list_shoppers: List[Shopper]) -> None:
+    def __save_user_data(self, list_shoppers: List[Shopper]) -> None:
         """
             Данный метод является вспомогательным и используется в методе data_control. Для каждого пользователя в
         переданном списке этот метод отправляет сообщение об окончании сессии при помощи телеграмм бота, сохраняет
@@ -219,13 +215,13 @@ class ShopperPool(UserPool):
             basket.save_on_server()
 
             if i_shopper.is_changed() and i_shopper.registered_on_server:
-                self.__api_put(i_shopper)
+                self._api_put(i_shopper)
             elif not i_shopper.registered_on_server:
-                self.__api_post(i_shopper)
+                self._api_post(i_shopper)
 
 
     @execute_in_new_thread(daemon=False)
-    def data_control(self) -> None:
+    def data_controll_delete(self) -> None:
         """
             Этот метод - бесконечный цикл выполняемый в отдельном потоке - служит для контроля востребованности данных
         пользователей. Если в пуле пользователей есть объекты, взаимодействие с которыми не осуществлялось установленное
@@ -237,7 +233,7 @@ class ShopperPool(UserPool):
             list_shopper_to_delete = list(filter(lambda i_shopper: datetime.now() - i_shopper.last_session > time_delta,
                                                  self._pool.values()))
 
-            self.__save_shoppers_data(list_shopper_to_delete)
+            self.__save_user_data(list_shopper_to_delete)
 
             new_pool = {i_id: i_shopper for i_id, i_shopper in self._pool.items()
                         if i_shopper not in list_shopper_to_delete}
@@ -251,10 +247,4 @@ class ShopperPool(UserPool):
                                                                                     final_size_pool))
             new_pool = None
 
-    def add_bot(self, bot) -> None:
-        """
-            Метод принимает на вход объект телеграмм бота и присваивает его атрибуту self.__bot. В пуле покупателей
-        объект телеграмм бота используется в методе __save_shoppers_data для отправки сообщения пользователю о
-        завершении сессии, поэтому у передаваемого объекта бота должен быть реализован метод close_session
-        """
-        self._bot = bot
+

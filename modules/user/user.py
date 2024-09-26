@@ -8,16 +8,21 @@
 
 from sqlalchemy import Column, Integer, String, PrimaryKeyConstraint, DateTime, create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Literal, Dict, Any, Callable, Optional, Tuple
 import os
 from queue import Queue, LifoQueue
 from telebot.types import Message
 import requests
 import json
+from abc import ABC, abstractmethod
+import time
+from threading import Semaphore
+import sys
 
 from ..logger import get_development_logger
 from ..products import Product
+from ..utils import execute_in_new_thread
 
 
 dev_log = get_development_logger(__name__)
@@ -54,16 +59,27 @@ class UserTable(Base):
 Base.metadata.create_all(engine)
 
 
-class User:
+class User(ABC):
     """
         Класс - содержащий основные атрибуты и методы необходимые для корректной работы с телеграмм ботом и
     предназначенный для хранения данных пользователя и управления ими.
     """
 
-    def __init__(self, tg_id: int, orders_url: str, product_url: str):
+    def __init__(self, tg_id: int,
+                 orders_url: str,
+                 product_url: str,
+                 firstName: Optional[str] = None,
+                 lastName: Optional[str] = None,
+                 nickname: Optional[str] = None,
+                 phoneNumber: Optional[str] = None,
+                 ):
         self.tgId: int = tg_id
         self.orders_url: str = orders_url
         self.product_url: str = product_url
+        self.firstName: Optional[str] = firstName
+        self.lastName: Optional[str] = lastName
+        self.nickname: Optional[str] = nickname
+        self.phoneNumber: Optional[str] = phoneNumber
         self.__message_id_bot_to_user = Queue(30)
         self.__message_id_user_to_bot = Queue(30)
         self.__recently_deleted_messages = list()
@@ -213,7 +229,7 @@ class UserPool:
         self._user_url: str = user_url
         self._orders_url: str = orders_url
         self._product_url: str = product_url
-        self._user_schema = user_schema
+        self._user_schema = user_schema()
         self.__user_class = user_class
         self._content_type: Dict[str, str] = {'Content-Type': 'application/json'}
         self._pool: Dict[int: User] = dict()
@@ -255,3 +271,68 @@ class UserPool:
             dev_log.exception('При попытке получить от сервера данные пользователя {} произошла ошибка:'.format(tg_id),
                               exc_info=ex)
 
+    def _api_put(self, user: User) -> None:
+        """Метод осуществляет сохранение измененных данных пользователя на внешнем сервере"""
+        try:
+            data = self._user_schema.dumps(user)
+            response = requests.put(self._user_url, data=data, headers=self._content_type)
+            if response.status_code == 200:
+                dev_log.debug(f'Данные пользователя {user.tgId} успешно обновлены на сервере')
+
+        except Exception as ex:
+            dev_log.exception(f'Не удалось обновить данные пользователя {user.tgId} из-за ошибки:', exc_info=ex)
+
+    def _api_post(self, user: User) -> None:
+        """Метод осуществляет добавление нового пользователя на внешний сервер"""
+        try:
+            data = self._user_schema.dumps(user)
+            response = requests.post(self._user_url, data=data, headers=self._content_type)
+            if response.status_code == 200:
+                dev_log.debug(f'Данные нового пользователя {user.tgId} успешно добавлены на сервер')
+
+        except Exception as ex:
+            dev_log.exception(f'Не удалось добавить данные нового пользователя {user.tgId} из-за ошибки:', exc_info=ex)
+
+    def add_bot(self, bot) -> None:
+        """
+            Метод принимает на вход объект телеграмм бота и присваивает его атрибуту self._bot. В пуле пользователей
+        объект телеграмм бота используется в методе __save_shoppers_data для отправки сообщения пользователю о
+        завершении сессии, поэтому у передаваемого объекта бота должен быть реализован метод close_session
+        """
+        self._bot = bot
+
+    @abstractmethod
+    def __save_user_data(self, list_user: List[User]) -> None:
+        """
+            Данный метод является абстрактным и используется для гарантии реализации данного метода в
+        дочерних классах.
+        """
+        print("Выполняется метод родителя")
+        pass
+
+    @execute_in_new_thread(daemon=False)
+    def data_control(self) -> None:
+        """
+            Этот метод - бесконечный цикл выполняемый в отдельном потоке - служит для контроля востребованности данных
+        пользователей. Если в пуле пользователей есть объекты, взаимодействие с которыми не осуществлялось установленное
+        время - они будут удалены из оперативной памяти.
+        """
+        time_delta = timedelta(seconds=self._session_time)
+        while self._session_time:
+            time.sleep(self._session_time // 2)
+            list_user_to_delete = list(filter(lambda i_user: datetime.now() - i_user.last_session > time_delta,
+                                                 self._pool.values()))
+
+            self.__save_user_data(list_user_to_delete)
+
+            new_pool = {i_id: i_user for i_id, i_user in self._pool.items()
+                        if i_user not in list_user_to_delete}
+
+            with Semaphore():
+                initial_pool_size = sys.getsizeof(self._pool)
+                self._pool = new_pool
+                final_size_pool = sys.getsizeof(self._pool)
+
+            dev_log.debug('Размер пула покупателей до/после очищения: {}/{}'.format(initial_pool_size,
+                                                                                    final_size_pool))
+            new_pool = None
