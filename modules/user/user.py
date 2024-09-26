@@ -19,6 +19,7 @@ from abc import ABC, abstractmethod
 import time
 from threading import Semaphore
 import sys
+from marshmallow import Schema, fields
 
 from ..logger import get_development_logger
 from ..products import Product
@@ -59,7 +60,7 @@ class UserTable(Base):
 Base.metadata.create_all(engine)
 
 
-class User(ABC):
+class User:
     """
         Класс - содержащий основные атрибуты и методы необходимые для корректной работы с телеграмм ботом и
     предназначенный для хранения данных пользователя и управления ими.
@@ -216,7 +217,18 @@ class User(ABC):
         return func(message)
 
 
-class UserPool:
+class UserSchema(Schema):
+    """Класс - схема данных предназначенная для валидации данных пользователя получаемых от внешнего API"""
+    tgId = fields.Int(required=True, allow_none=False)
+    firstName = fields.Str(allow_none=True)
+    lastName = fields.Str(allow_none=True)
+    nickname = fields.Str(allow_none=True)
+    phoneNumber = fields.Str(allow_none=True)
+    orders_url = fields.Str(required=True, allow_none=False)
+    product_url = fields.Str(required=True, allow_none=False)
+
+
+class UserPool(ABC):
     """
         Данный является родительским для классов ShopperPool и SellerPool и является моделью объекта,
     предназначенного для хранения коллекции пользователей в одном месте, предоставления быстрого доступа к
@@ -264,7 +276,7 @@ class UserPool:
                 data = json.loads(response.text)
                 data["orders_url"] = self._orders_url
                 data["product_url"] = self._product_url
-                return self._user_schema.loads(json.dumps(data))
+                return self._user_schema.loads(json.dumps(data), unknown='exclude')
             dev_log.info('Не удалось получить от сервера данные пользователя {}'.format(tg_id))
 
         except Exception as ex:

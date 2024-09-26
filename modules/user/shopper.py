@@ -3,7 +3,7 @@
 пользователя являющегося источником заказов на приобретение товаров. Класс покупатель является дочерним для класса User.
 """
 import sys
-from marshmallow import Schema, fields, post_load
+from marshmallow import fields, post_load
 from typing import Optional, List, Dict
 import requests
 import time
@@ -11,7 +11,7 @@ from datetime import timedelta, datetime
 from threading import Semaphore
 import json
 
-from .user import User, UserPool
+from .user import User, UserPool, UserSchema
 from ..orders import ShopperOrdersPool, Order, Basket
 from ..logger import get_development_logger
 from ..products import Product
@@ -104,16 +104,9 @@ class Shopper(User):
         self.__orders.create_new_order()
 
 
-class ShopperSchema(Schema):
+class ShopperSchema(UserSchema):
     """Класс - схема данных предназначенная для валидации данных покупателя получаемых от внешнего API"""
-    tgId = fields.Int(required=True, allow_none=False)
-    firstName = fields.Str(allow_none=True)
-    lastName = fields.Str(allow_none=True)
-    nickname = fields.Str(allow_none=True)
-    phoneNumber = fields.Str(allow_none=True)
     homeAddress = fields.Str(allow_none=True)
-    orders_url = fields.Str(required=True, allow_none=False)
-    product_url = fields.Str(required=True, allow_none=False)
 
     @post_load
     def create_shopper(self, data, **kwargs) -> Shopper:
@@ -131,7 +124,6 @@ class ShopperPool(UserPool):
     """
     def __init__(self, shopper_url: str, orders_url: str, product_url: str, session_time: Optional[int] = None):
         super().__init__(shopper_url, orders_url, product_url, ShopperSchema, self.__class__, session_time)
-        self.__shopper_schema: ShopperSchema = ShopperSchema()
 
     def _save_user_data(self, list_shoppers: List[Shopper]) -> None:
         """
