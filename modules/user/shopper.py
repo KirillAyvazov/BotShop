@@ -134,7 +134,7 @@ class ShopperPool(UserPool):
     с внешним API, удаленно хранящим данные покупателей
     """
     def __init__(self, shopper_url: str, orders_url: str, product_url: str, session_time: Optional[int] = None):
-        super().__init__(shopper_url, orders_url, product_url, self.__class__, session_time)
+        super().__init__(shopper_url, orders_url, product_url, ShopperSchema, self.__class__, session_time)
         self.__shopper_schema: ShopperSchema = ShopperSchema()
 
 
