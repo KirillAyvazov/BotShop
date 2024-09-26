@@ -32,7 +32,7 @@ class ProductData:
         self.product: Product = self.__api_get_product(self.productsId)
 
     @product_cache
-    def __api_get_product(self, products_id) -> Product:
+    def __api_get_product(self, products_id: str) -> Product:
         """Данный метод осуществляет запрос к внешнему API для получения информации о товаре по указанному id товара"""
         try:
             response = requests.get('/'.join([self.__product_url, products_id]), headers=self.__content_type)
@@ -365,7 +365,6 @@ class OrderSchema(Schema):
     completionDate = fields.Str(required=False, allow_none=True)
     totalCost = fields.Int(required=True, allow_none=False)
     delivery = fields.Boolean(required=True, allow_none=False)
-    #products = fields.List(ProductDataSchema, required=True, allow_none=False)
     products = fields.Nested(ProductDataSchema, many=True, required=True)
     source = fields.Str(required=False, allow_none=True, dump_only=True, validate=[validate.OneOf(['buyer', 'seller'])])
     product_url = fields.Str(required=True, allow_none=False, load_only=True)
