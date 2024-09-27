@@ -150,8 +150,20 @@ class ShopperPool(UserPool):
             elif not i_shopper.registered_on_server:
                 self._api_post(i_shopper)
 
-    def get_personal_data(self, tg_id: int) -> Dict[str, Any]:
+    def get_personal_data(self, tg_id: int) -> str:
         """
-            Метод возвращает персональную информацию о покупателе в виде словаря
+            Метод возвращает персональную информацию о покупателе в виде строки
         """
-        return super()._api_get(tg_id, get_user_object=False)
+        data =  super()._api_get(tg_id, get_user_object=False)
+
+        name = data.get("nickname", None)
+        if name is None:
+            name = " ".join([str(data.get("firstName", None)), str(data.get("lastName", None))])
+
+        text = [
+            f"<b>Имя:</b> {name}",
+            f"<b>Номер телефона:</b> {str(data.get('phoneNumber', None))}",
+            f"<b>Адрес доставки:</b> {str(data.get('homeAddress', None))}"
+        ]
+
+        return "\n".join(text)

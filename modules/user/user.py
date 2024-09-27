@@ -277,12 +277,13 @@ class UserPool(ABC):
             response = requests.get('/'.join([self._user_url, str(tg_id)]), headers=self._content_type)
             if response.status_code == 200:
                 data = json.loads(response.text)
+
+                if not get_user_object:
+                    return data
+
                 data["orders_url"] = self._orders_url
                 data["product_url"] = self._product_url
-
-                if get_user_object:
-                    return self._user_schema.loads(json.dumps(data), unknown='exclude')
-                return json.loads(data)
+                return self._user_schema.loads(json.dumps(data), unknown='exclude')
 
             dev_log.info('Не удалось получить от сервера данные пользователя {}'.format(tg_id))
 
