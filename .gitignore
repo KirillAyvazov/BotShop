@@ -2,3 +2,5 @@ database/
 log_data/
 .idea/
 __pycache__/
+test_main.py
+

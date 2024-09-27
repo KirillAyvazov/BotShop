@@ -26,19 +26,20 @@ class ProductData:
     def __init__(self, productsId: str, count: int, product_url: str):
         self.productsId: str = productsId
         self.count: int = count
-        self.__product_url: str = product_url
-        self.__content_type: Dict[str, str] = {'Content-Type': 'application/json'}
-        self.__product_schema = ProductSchema()
-        self.product: Product = self.__api_get_product(self.productsId)
+        self._product_url: str = product_url
+        self._content_type: Dict[str, str] = {'Content-Type': 'application/json'}
+        self._product_schema = ProductSchema()
+        self.product: Product = self._api_get_product(self.productsId)
 
     @product_cache
-    def __api_get_product(self, products_id: str) -> Product:
+    def _api_get_product(self, products_id: str) -> Product:
         """Данный метод осуществляет запрос к внешнему API для получения информации о товаре по указанному id товара"""
         try:
-            response = requests.get('/'.join([self.__product_url, products_id]), headers=self.__content_type)
+            response = requests.get('/'.join([self._product_url, products_id]), headers=self._content_type)
 
             if response.status_code == 200:
-                product: Product = self.__product_schema.loads(response.text)
+                print(self._product_schema)
+                product: Product = self._product_schema.loads(response.text)
                 product.count = self.count
                 return product
 
@@ -106,7 +107,7 @@ class Order:
 
         self.__get_product_obj()
 
-        self._control_hash: int = self.__get_hash_sum()
+        self._control_hash: int = self._get_hash_sum()
 
     def __get_product_obj(self) -> None:
         """Метод преобразует полученные данные о товарах в список объектов - товаров"""
@@ -138,7 +139,7 @@ class Order:
 
             if response.status_code == 200:
                 dev_log.debug(f'Данные заказа №{self.idOrder} успешно обновлены на сервере')
-                self._control_hash = self.__get_hash_sum()
+                self._control_hash = self._get_hash_sum()
 
             else:
                 dev_log.warning(f'Не удалось обновить заказ №{self.idOrder} на сервере. Статус код {response.status_code}')
@@ -153,7 +154,7 @@ class Order:
         elif self.__is_updated():
             self._api_put()
 
-    def __get_hash_sum(self) -> int:
+    def _get_hash_sum(self) -> int:
         """Этот метод возвращает хэш сумму всех полей объекта которые хранятся на сервере"""
         order_srt = ''.join([str(i_val) for i_name, i_val in self.__dict__.items() if not i_name.startswith('_')])
         order_products = ''.join([''.join([str(i_product), str(i_product.count)]) for i_product in self.products])
@@ -163,7 +164,7 @@ class Order:
 
     def __is_updated(self) -> bool:
         """Если заказ был обновлен - метод вернет True"""
-        return not self.__get_hash_sum() == self._control_hash
+        return not self._get_hash_sum() == self._control_hash
 
     def __repr__(self) -> str:
         """Метод выводит информацию о заказе при обращении к объекту заказа как к строчному объекту"""
