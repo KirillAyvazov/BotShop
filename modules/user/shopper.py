@@ -4,7 +4,7 @@
 """
 import sys
 from marshmallow import fields, post_load
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 import requests
 import time
 from datetime import timedelta, datetime
@@ -149,3 +149,9 @@ class ShopperPool(UserPool):
                 self._api_put(i_shopper)
             elif not i_shopper.registered_on_server:
                 self._api_post(i_shopper)
+
+    def get_personal_data(self, tg_id: int) -> Dict[str, Any]:
+        """
+            Метод возвращает персональную информацию о покупателе в виде словаря
+        """
+        return super()._api_get(tg_id, get_user_object=False)

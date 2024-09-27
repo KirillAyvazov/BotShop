@@ -9,7 +9,7 @@
 from sqlalchemy import Column, Integer, String, PrimaryKeyConstraint, DateTime, create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from datetime import datetime, timedelta
-from typing import List, Literal, Dict, Any, Callable, Optional, Tuple
+from typing import List, Literal, Dict, Any, Callable, Optional, Tuple, Union
 import os
 from queue import Queue, LifoQueue
 from telebot.types import Message
@@ -268,15 +268,22 @@ class UserPool(ABC):
 
         return user
 
-    def _api_get(self, tg_id: int) -> Optional[User]:
-        """Метод реализует получение данных пользователя от внешнего API"""
+    def _api_get(self, tg_id: int, get_user_object: bool = True) -> Union[Optional[User], Optional[Dict[str, Any]]]:
+        """
+            Метод реализует получение данных пользователя от внешнего API. Если аргумент get_user_object = True,
+        метод вернет объект пользователя, если False - словарь с данными пользователя
+        """
         try:
             response = requests.get('/'.join([self._user_url, str(tg_id)]), headers=self._content_type)
             if response.status_code == 200:
                 data = json.loads(response.text)
                 data["orders_url"] = self._orders_url
                 data["product_url"] = self._product_url
-                return self._user_schema.loads(json.dumps(data), unknown='exclude')
+
+                if get_user_object:
+                    return self._user_schema.loads(json.dumps(data), unknown='exclude')
+                return json.loads(data)
+
             dev_log.info('Не удалось получить от сервера данные пользователя {}'.format(tg_id))
 
         except Exception as ex:
