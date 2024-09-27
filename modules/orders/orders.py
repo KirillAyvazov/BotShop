@@ -38,7 +38,6 @@ class ProductData:
             response = requests.get('/'.join([self._product_url, products_id]), headers=self._content_type)
 
             if response.status_code == 200:
-                print(self._product_schema)
                 product: Product = self._product_schema.loads(response.text)
                 product.count = self.count
                 return product
@@ -151,8 +150,9 @@ class Order:
         """Метод сохраняет данные о заказе на сервере, если это необходимо (заказ новый или был изменен"""
         if not self._registered_on_server:
             self._api_post()
-        elif self.__is_updated():
+        elif self.is_updated():
             self._api_put()
+            self._control_hash = self._get_hash_sum()
 
     def _get_hash_sum(self) -> int:
         """Этот метод возвращает хэш сумму всех полей объекта которые хранятся на сервере"""
@@ -162,7 +162,7 @@ class Order:
 
         return hash(order_srt)
 
-    def __is_updated(self) -> bool:
+    def is_updated(self) -> bool:
         """Если заказ был обновлен - метод вернет True"""
         return not self._get_hash_sum() == self._control_hash
 
