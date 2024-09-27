@@ -29,18 +29,21 @@ class ProductData:
         self._product_url: str = product_url
         self._content_type: Dict[str, str] = {'Content-Type': 'application/json'}
         self._product_schema = ProductSchema()
-        self.product: Product = self._api_get_product(self.productsId)
+
+        self.product = self._product_schema.loads(self._api_get_product(self.productsId))
+        self.product.count = self.count
+
+    # С КЭШИРВАНИЕМ БЕДА! ОНО ВОЗВРАЩАЕТ ОДИН И ТОТ ЖЕ ОБЪЕКТ ПРОДУКАТА, ПОЭТОМУ У ПРОДУКТОВ В ЗАКАЗЕ НЕ
+    # МЕНЯЕТСЯ КОЛИЧЕСВО!
 
     @product_cache
-    def _api_get_product(self, products_id: str) -> Product:
+    def _api_get_product(self, products_id: str) -> str:
         """Данный метод осуществляет запрос к внешнему API для получения информации о товаре по указанному id товара"""
         try:
             response = requests.get('/'.join([self._product_url, products_id]), headers=self._content_type)
 
             if response.status_code == 200:
-                product: Product = self._product_schema.loads(response.text)
-                product.count = self.count
-                return product
+                return response.text
 
             dev_log.debug(f'Не удалось получить данные о товаре {products_id} при загрузке заказа: статус код '
                           f'{response.status_code}')
@@ -148,6 +151,7 @@ class Order:
 
     def save_on_server(self):
         """Метод сохраняет данные о заказе на сервере, если это необходимо (заказ новый или был изменен"""
+        self.datetimeUpdate = datetime.now()
         if not self._registered_on_server:
             self._api_post()
         elif self.is_updated():
