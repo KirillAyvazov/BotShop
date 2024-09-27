@@ -3,7 +3,7 @@
 продаваемыми в магазине товарами.
 """
 import os.path
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Union
 from telebot.types import InputMediaPhoto
 import requests
 from multiprocessing.pool import ThreadPool
@@ -13,10 +13,11 @@ from threading import Semaphore
 import json
 
 from ..logger import get_development_logger
-from ..utils import execute_in_new_thread, ProjectCache
+from ..utils import execute_in_new_thread, ProjectCache, DataTunnel
 
 dev_log = get_development_logger(__name__)
 images_cache = ProjectCache()
+data_tunnel = DataTunnel()
 
 
 class Product:
@@ -30,7 +31,22 @@ class Product:
         self.image: List[InputMediaPhoto] = self.__get_input_media_photo(image)
         self.delivery: bool = delivery
         self.category: str = category
-        self.count: int = count
+        #self.count: int = count     # Рассмотреть вопрос о необходимости этого атрибута!
+        self.__memory_count: Dict[str, int] = dict()
+
+    def set_count(self, key: Union[int, str], count: int) -> None:
+        """
+            Метод служит для задания количества продукта в заказе пользователя.
+            Контекст. Для всех пользователей в проекте предусмотрен один единственный экземпляр продукта, что сделано
+        в целях экономии памяти. Однако, для разных пользователей продукты будут отличаться количеством, указанном в
+        заказе. Для осуществления этого различия, объект продукта имеет в качестве своего атрибута словарь, в котором
+        ключ - id пользователя + id заказа, а значение - количество продукта.
+        """
+        self.__memory_count[key] = count
+
+    def get_count(self, key: Union[int, str]) -> Optional[int]:
+        """Метод возвращает количество товара в заказе указанному ключу"""
+        return self.__memory_count.get(key, None)
 
     def __eq__(self, other):
         """Метод сравнения двух продуктов по их id"""
@@ -117,7 +133,7 @@ class Category:
         self.categoryId: int = categoryId
         self.name: str = name
         self.variability: bool = variability
-        self.products: List['Product'] = self.__api_get_list_product(categoryId)
+        self.products: List[Product] = self.__api_get_list_product(categoryId)
 
 
     def __api_get_list_product(self, category_id: int) -> List[Product]:
@@ -157,6 +173,7 @@ class CategorySchema(Schema):
         return Category(**data)
 
 
+@data_tunnel.add_methods("get_product")
 class CategoryPool:
     """
         Класс объект которого является для бота основной сущность для взаимодействия с каталогом продаваемых продуктов.
@@ -170,6 +187,7 @@ class CategoryPool:
         self.__category_schema: CategorySchema = CategorySchema()
         self.__update_period: Optional[int] = update_period
         self.categories: List[Category] = list()
+        self.__product_dict: Dict[str, Product] = dict()
 
         self.update()
 
@@ -192,12 +210,18 @@ class CategoryPool:
 
         return []
 
-    def update(self) -> List[Category]:
+    def update(self) -> None:
         """Метод служит для получения или обновления списка категорий продаваемых товаров"""
         new_list_category = self.__api_get_list_category()
         if len(new_list_category) > 0:
             with Semaphore():
                 self.categories = new_list_category
+                self.__product_dict = {i_product.productsId: i_product for i_category in self.categories
+                                       for i_product in i_category.products}
+
+    def get_product(self, product_id: str) -> Optional[Product]:
+        """Метод возвращает объект продукт из пула по указанному id"""
+        return self.__product_dict.get(product_id, None)
 
     @execute_in_new_thread(daemon=False)
     def data_control(self) -> None:

@@ -3,18 +3,19 @@
 помощи которого осуществляется хранение, доступ и редактирование заказов пользователя.
 """
 from marshmallow import Schema, fields, post_load, validate
-from typing import Optional, List, Dict, Union
+from typing import Optional, List, Dict, Union, Any
 import requests
 from copy import deepcopy
 from datetime import datetime
 
 from ..products import Product, ProductSchema
 from ..logger import get_development_logger
-from ..utils import ProjectCache
+from ..utils import ProjectCache, DataTunnel
 
 
 dev_log = get_development_logger(__name__)
 product_cache = ProjectCache()
+data_tunnel = DataTunnel()
 
 
 class ProductData:
@@ -30,11 +31,14 @@ class ProductData:
         self._content_type: Dict[str, str] = {'Content-Type': 'application/json'}
         self._product_schema = ProductSchema()
 
-        self.product = self._product_schema.loads(self._api_get_product(self.productsId))
-        self.product.count = self.count
+#        self.product = self._get_product_object()
+
+        #self.product = self._product_schema.loads(self._api_get_product(self.productsId))
+        #self.product.count = self.count
 
     # С КЭШИРВАНИЕМ БЕДА! ОНО ВОЗВРАЩАЕТ ОДИН И ТОТ ЖЕ ОБЪЕКТ ПРОДУКАТА, ПОЭТОМУ У ПРОДУКТОВ В ЗАКАЗЕ НЕ
     # МЕНЯЕТСЯ КОЛИЧЕСВО!
+
 
     @product_cache
     def _api_get_product(self, products_id: str) -> str:
@@ -59,12 +63,12 @@ class ProductDataSchema(Schema):
     """
     productsId = fields.Str(required=True, allow_none=False)
     count = fields.Integer(required=True, allow_none=False)
-    product_url = fields.Str(required=True, allow_none=False, load_only=True)
+    #product_url = fields.Str(required=True, allow_none=False, load_only=True)
 
-    @post_load
-    def create_product_data(self, data, **kwargs) -> ProductData:
-        """Метод позволяет возвратить после загрузки данных объект - товар"""
-        return ProductData(**data)
+    #@post_load
+    #def create_product_data(self, data, **kwargs) -> ProductData:
+    #    """Метод позволяет возвратить после загрузки данных объект - товар"""
+    #    return ProductData(**data)
 
 
 class Order:
@@ -76,7 +80,7 @@ class Order:
         datetimeCreation: Optional[str] = datetime.now().strftime("%d-%m-%Y %H:%M"),
         totalCost: Optional[int] = 0,
         delivery: bool = False,
-        products: Union[str, List[Product]] = list(),
+        products: List[Dict[str, Any]] = list(),
         datetimeUpdate: Optional[str] = None,
         userComment: Optional[str] = None,
         sellerComment: Optional[str] = None,
@@ -92,7 +96,7 @@ class Order:
         self.datetimeCreation: str = datetimeCreation
         self.totalCost: int = totalCost
         self.delivery: bool = delivery
-        self.products: List[Product] = products
+        self.products: List[Dict[str, Any]] = products
         self.datetimeUpdate: Optional[str] = datetimeUpdate
         self.userComment: Optional[str] = userComment
         self.sellerComment: Optional[str] = sellerComment
@@ -113,7 +117,16 @@ class Order:
 
     def __get_product_obj(self) -> None:
         """Метод преобразует полученные данные о товарах в список объектов - товаров"""
-        self.products: List[Product] = [i_product_data.product for i_product_data in self.products]
+        list_product_obj = []
+        for i_dict in self.products:
+            product_id = i_dict.get("productsId")
+            product: Product = data_tunnel.perform("get_product", product_id)
+            if product:
+                product_count = i_dict.get("count")
+                product.set_count(self.idOrder, product_count)
+                list_product_obj.append(product)
+        self.products = list_product_obj
+
 
     def _api_post(self):
         """Метод передачи данных о заказе на сервер"""
@@ -161,7 +174,9 @@ class Order:
     def _get_hash_sum(self) -> int:
         """Этот метод возвращает хэш сумму всех полей объекта которые хранятся на сервере"""
         order_srt = ''.join([str(i_val) for i_name, i_val in self.__dict__.items() if not i_name.startswith('_')])
-        order_products = ''.join([''.join([str(i_product), str(i_product.count)]) for i_product in self.products])
+        order_products = ''.join([''.join([str(i_product),
+                                           str(i_product.get_count(self.idOrder))])
+                                  for i_product in self.products])
         order_srt = ''.join([order_srt, order_products])
 
         return hash(order_srt)
@@ -198,8 +213,8 @@ class Order:
         for index, i_product in enumerate(self.products):
             i_product: Product
             text.append('{num}. {category_name}: {prod_name} - {count} шт. = {sum} рублей'.format(num=index+1,
-                        category_name=i_product.category, prod_name=i_product.name, count=str(i_product.count),
-                        sum=i_product.count*i_product.price))
+                        category_name=i_product.category, prod_name=i_product.name, count=str(i_product.get_count(self.idOrder)),
+                        sum=i_product.get_count(self.idOrder)*i_product.price))
 
         return '\n\n'.join(text)
 

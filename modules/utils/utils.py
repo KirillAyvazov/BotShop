@@ -34,6 +34,26 @@ def execute_in_new_thread(_func: Optional[Callable] = None, *, daemon: bool = Fa
     return decorator(_func)
 
 
+def singleton(cls):
+    """
+        Функция - декоратор для классов. Она гарантирует, что при любой инициализации объекта класса, всегда будет
+    возвращен один и тот же объект класса.
+        Метод - декоратор, который инициализирует объект декорируемого класса, если тот еще не был инициализирован.
+    Если был - возвращает уже имеющийся объект
+    """
+    memory: Dict[str: object] = dict()
+
+    @functools.wraps(cls)
+    def wrapper(*args, **kwargs):
+        obj = memory.get(cls, None)
+        if obj is None:
+            obj = cls(*args, **kwargs)
+            memory[cls] = obj
+        return obj
+    return wrapper
+
+
+@singleton
 class ProjectCache:
     """
         Класс - модель кэша данных. Позволяет сохранять полученную от API информацию, которая может быть
@@ -95,3 +115,53 @@ def timer(func: Callable) -> Optional[Any]:
         print(f"Время выполнения функции {func.__name__} - {round(time.time()-time_start, 3)}")
         return result
     return wrapped
+
+
+@singleton
+class DataTunnel:
+    """
+        Класс - декоратор, предназначенный для того что бы обойти недостатки композиционной архитектуры, принятой в
+    этом проекте. Объект класса является декоратором и сохраняет в своей памяти декорируемый метод или функцию. Так же
+    он позволяет вызвать сохраненный метод или функцию в другом месте проекта.
+        Контекст. Мне нужно обратиться к методу объекта класса CategoryPool из метода класса Order. Варианты:
+    либо как-то гарантировать что в файле structure каждый раз при создании проекта будет создаваться объект
+    category_pool и прописать логику добавления и передачи этого объекта по цепочке shopper_pool - shopper -
+    shopper_orders_pool - order - product_data, либо использовать тоннель данных, который позволит вызвать необходимый
+    в order объект category_pool
+        Данный метод налагает ограничения на объекты класса - они становятся СИНГЛТОНАМИ!!!
+    """
+    def __init__(self):
+        self.__func_dict: Dict[str, Callable] = dict()
+
+    def add_methods(self, *methods_name) -> Callable:
+        """
+            Метод - декоратор класса. Предназначен для регистрации методов класса. В качестве аргументов принимает
+        названия методов которые должны быть зарегистрированы
+        """
+        def decorator(cls) -> Callable:
+            @functools.wraps(cls)
+            def wrapped(*args, **kwargs) -> object:
+                nonlocal cls
+                cls = singleton(cls)
+                cls_obj = cls(*args, **kwargs)
+                methods = {i_name_methods: getattr(cls_obj, i_name_methods, None) for i_name_methods in methods_name}
+                self.__func_dict.update(methods)
+                return cls_obj
+            return wrapped
+        return decorator
+
+    def add_func(self, func: Callable) -> Callable:
+        """Метод - декоратор. Сохраняет декорируемую функцию в памяти тоннеля"""
+        if func.__name__ in self.__func_dict:
+            raise ValueError(f"Функция с именем {func.__name__} уже зарегистрирована в тоннеле данных")
+
+        self.__func_dict[func.__name__] = func
+        return func
+
+    def perform(self, func_name: str, *args, **kwargs) -> Optional[Any]:
+        """Метод выполнения зарегистрированного метода или функции, с переданным названием и аргументами"""
+        func = self.__func_dict.get(func_name, None)
+        if func:
+            return func(*args, **kwargs)
+
+        raise ValueError(f"Функция с именем {func_name} НЕ зарегистрирована в тоннеле данных")

@@ -34,8 +34,8 @@ class ShopperOrdersPool:
                     i_dict['product_url'] = self.__product_url
                     i_dict['registered_on_server'] = True
 
-                    for j_dict in i_dict.get('products', {}):
-                        j_dict['product_url'] = self.__product_url
+                    #for j_dict in i_dict.get('products', {}):
+                    #    j_dict['product_url'] = self.__product_url
 
                 return self.__order_schema.loads(json.dumps(data), many=True)
 

@@ -13,6 +13,8 @@ import dotenv
 from typing import Dict, Any, Union
 from dataclasses import dataclass
 
+from ..utils import singleton
+
 
 dotenv.load_dotenv()
 
