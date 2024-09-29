@@ -102,7 +102,7 @@ class SellerPool(UserPool):
     с внешним API, удаленно хранящим данные продавцов
     """
     def __init__(self, seller_url: str, orders_url: str, product_url: str, session_time: Optional[int] = None):
-        super().__init__(seller_url, orders_url, product_url, SellerSchema, self.__class__, session_time)
+        super().__init__(seller_url, orders_url, product_url, SellerSchema, Seller, session_time)
 
     def _save_user_data(self, list_seller: List[Seller]) -> None:
         """

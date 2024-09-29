@@ -2,7 +2,9 @@
     Данный модуль содержит реализацию модели заказа пользователей и реализацию объекта - пула заказа, объекта при
 помощи которого осуществляется хранение, доступ и редактирование заказов пользователя.
 """
-from marshmallow import Schema, fields, post_load, validate
+from itertools import product
+
+from marshmallow import Schema, fields, post_load, validate, pre_dump
 from typing import Optional, List, Dict, Union, Any
 import requests
 from copy import deepcopy
@@ -111,13 +113,16 @@ class Order:
 
         self._registered_on_server: bool = registered_on_server
 
+        self.__list_origin_product = []
+
         self.__get_product_obj()
 
         self._control_hash: int = self._get_hash_sum()
 
     def __get_product_obj(self) -> None:
-        """Метод преобразует полученные данные о товарах в список объектов - товаров"""
+        """Метод преобразует полученные данные (JSON) о товарах в список объектов - товаров"""
         list_product_obj = []
+
         for i_dict in self.products:
             product_id = i_dict.get("productsId")
             product: Product = data_tunnel.perform("get_product", product_id)
@@ -127,11 +132,44 @@ class Order:
                 list_product_obj.append(product)
         self.products = list_product_obj
 
+    def __set_products_count(self):
+        """
+            Метод позволяет сериализовать объекты продуктов с правильным атрибутом count. Метод создает временную копию
+        объектов товаров, присваивает им нужные значения count, сохраняя при этом в памяти оригинальный список объектов.
+            Метод работает в связке с методом __order_dumps
+        """
+        self.__list_origin_product = self.products[:]
+
+        list_product_copy = []
+
+        for i_product in self.products:
+            product_copy = deepcopy(i_product)
+            setattr(product_copy, "count", product_copy.get_count(self.idOrder))
+            list_product_copy.append(product_copy)
+
+        self.products = list_product_copy
+
+    def __order_dumps(self) -> str:
+        """
+            Метод позволяет правильно серилизовать заказ, а именно количество товаров в нем. Данный метод работате в
+        связке с методом __set_products_count. А именно, данный метод серилизует копии продуктов с уже правильным count,
+        после чего возвращает атрибуту products оригинальное значение - список общих для всеех товаров.
+        """
+        try:
+            self.__set_products_count()
+            self.__set_products_count()
+            data = self._order_schema.dumps(self)
+            self.products = self.__list_origin_product
+            self.__list_origin_product = None
+            return data
+        except Exception as ex:
+            dev_log.exception(f"Не удалось серилизовать заказа {self.idOrder}", exc_info=ex)
 
     def _api_post(self):
         """Метод передачи данных о заказе на сервер"""
         try:
-            data = self._order_schema.dumps(self)
+            data = self.__order_dumps()
+
             response = requests.post(self._order_url, headers=self._content_type, data=data)
 
             if response.status_code == 200:
@@ -149,7 +187,7 @@ class Order:
     def _api_put(self):
         """Метод обновления данных о заказе на сервер"""
         try:
-            data = self._order_schema.dumps(self)
+            data = self.__order_dumps()
             response = requests.put(self._order_url, headers=self._content_type, data=data)
 
             if response.status_code == 200:
