@@ -36,7 +36,6 @@ class SellerOrdersPool:
                 data = json.loads(response.text)
                 for i_dict in data:
                     i_dict['order_url'] = self.__url_order
-                    i_dict['product_url'] = self.__product_url
                     i_dict['registered_on_server'] = True
 
                     for j_dict in i_dict.get('products', {}):

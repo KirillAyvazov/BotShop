@@ -40,7 +40,7 @@ bot.add_user_pool(shopper_pool)
 
 
 # Создаем объект пул категорий
-category_pool = CategoryPool(url_category=configurator.api.category,
+category_pool = CategoryPool(url_category=configurator.api.category, url_product=configurator.api.product,
                              update_period=configurator.product_data.update_period)
 
 # Запускаем поток по контролю обновлений товаров

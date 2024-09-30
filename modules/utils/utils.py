@@ -144,7 +144,8 @@ class DataTunnel:
                 nonlocal cls
                 cls = singleton(cls)
                 cls_obj = cls(*args, **kwargs)
-                methods = {i_name_methods: getattr(cls_obj, i_name_methods, None) for i_name_methods in methods_name}
+                methods = {".".join([cls.__name__, i_name_methods]): getattr(cls_obj, i_name_methods, None)
+                           for i_name_methods in methods_name}
                 self.__func_dict.update(methods)
                 return cls_obj
             return wrapped
@@ -153,7 +154,7 @@ class DataTunnel:
     def add_func(self, func: Callable) -> Callable:
         """Метод - декоратор. Сохраняет декорируемую функцию в памяти тоннеля"""
         if func.__name__ in self.__func_dict:
-            raise ValueError(f"Функция с именем {func.__name__} уже зарегистрирована в тоннеле данных")
+            raise ValueError("Функция с именем {} уже зарегистрирована в тоннеле данных".format(func.__name__))
 
         self.__func_dict[func.__name__] = func
         return func
@@ -164,4 +165,4 @@ class DataTunnel:
         if func:
             return func(*args, **kwargs)
 
-        raise ValueError(f"Функция с именем {func_name} НЕ зарегистрирована в тоннеле данных")
+        raise ValueError("Функция с именем {} НЕ зарегистрирована в тоннеле данных".format(func_name))

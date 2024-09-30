@@ -31,7 +31,6 @@ class ShopperOrdersPool:
                 data = json.loads(response.text)
                 for i_dict in data:
                     i_dict['order_url'] = self.__url_order
-                    i_dict['product_url'] = self.__product_url
                     i_dict['registered_on_server'] = True
 
                     #for j_dict in i_dict.get('products', {}):
@@ -59,7 +58,7 @@ class ShopperOrdersPool:
             self.pool.remove(basket)
 
         else:
-            basket = Basket(tgId=self.__tgId ,product_url=self.__product_url, order_url=self.__url_order,
+            basket = Basket(tgId=self.__tgId, order_url=self.__url_order,
                             datetimeCreation=datetime.now().strftime("%d.%m.%Y %H:%M"))
 
         return basket
@@ -71,5 +70,5 @@ class ShopperOrdersPool:
         """
         self.basket.create_new_order()
         self.pool.append(self.basket)
-        self.basket = Basket(tgId=self.__tgId, product_url=self.__product_url, order_url=self.__url_order,
+        self.basket = Basket(tgId=self.__tgId, order_url=self.__url_order,
                              datetimeCreation=datetime.now().strftime("%d.%m.%Y %H:%M"))

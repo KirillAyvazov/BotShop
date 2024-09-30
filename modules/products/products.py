@@ -3,7 +3,7 @@
 продаваемыми в магазине товарами.
 """
 import os.path
-from typing import List, Dict, Optional, Any, Union
+from typing import List, Dict, Optional, Any
 from telebot.types import InputMediaPhoto
 import requests
 from multiprocessing.pool import ThreadPool
@@ -16,7 +16,7 @@ from ..logger import get_development_logger
 from ..utils import execute_in_new_thread, ProjectCache, DataTunnel
 
 dev_log = get_development_logger(__name__)
-images_cache = ProjectCache()
+modul_cache = ProjectCache()
 data_tunnel = DataTunnel()
 
 
@@ -31,29 +31,13 @@ class Product:
         self.image: List[InputMediaPhoto] = self.__get_input_media_photo(image)
         self.delivery: bool = delivery
         self.category: str = category
-        #self.count: int = count     # Рассмотреть вопрос о необходимости этого атрибута!
-        self.__memory_count: Dict[str, int] = dict()
-
-    def set_count(self, key: Union[int, str], count: int) -> None:
-        """
-            Метод служит для задания количества продукта в заказе пользователя.
-            Контекст. Для всех пользователей в проекте предусмотрен один единственный экземпляр продукта, что сделано
-        в целях экономии памяти. Однако, для разных пользователей продукты будут отличаться количеством, указанном в
-        заказе. Для осуществления этого различия, объект продукта имеет в качестве своего атрибута словарь, в котором
-        ключ - id пользователя + id заказа, а значение - количество продукта.
-        """
-        self.__memory_count[key] = count
-
-    def get_count(self, key: Union[int, str]) -> Optional[int]:
-        """Метод возвращает количество товара в заказе указанному ключу"""
-        return self.__memory_count.get(key, None)
 
     def __eq__(self, other):
         """Метод сравнения двух продуктов по их id"""
         return self.productsId == getattr(other, "productsId", None)
 
     @classmethod
-    @images_cache
+    @modul_cache
     def __get_bytes_by_url(cls, url: str) -> bytes:
         """
             Данный метод вспомогательный, используется в методе get_list_images и служит для получения байтов
@@ -181,15 +165,34 @@ class CategoryPool:
     продаваемых товаров. При помощи объекта класса CategoryPool осуществляется периодическое обновление каталога
     продаваемых товаров.
     """
-    def __init__(self, url_category: str, update_period: Optional[int] = None):
+    def __init__(self, url_category: str, url_product: str, update_period: Optional[int] = None):
         self.__url_category = url_category
+        self.__url_product = url_product
         self.__content_type: Dict[str, str] = {'Content-Type': 'application/json'}
         self.__category_schema: CategorySchema = CategorySchema()
+        self.__product_schema: ProductSchema = ProductSchema()
         self.__update_period: Optional[int] = update_period
         self.categories: List[Category] = list()
         self.__product_dict: Dict[str, Product] = dict()
 
         self.update()
+
+    @modul_cache
+    def __api_get_product(self, products_id: str) -> str:
+        """
+            Данный метод осуществляет запрос к внешнему API для получения информации о конкретном товаре по указанному
+        id товара
+        """
+        try:
+            response = requests.get('/'.join([self.__url_product, products_id]), headers=self.__content_type)
+            if response.status_code == 200:
+                return self.__product_schema.loads(response.text)
+
+            dev_log.debug(f'Не удалось получить данные о товаре {products_id} при загрузке заказа: статус код '
+                          f'{response.status_code}')
+
+        except Exception as ex:
+            dev_log.exception(f'При попытке получить данные товара {products_id} произошла ошибка:', exc_info=ex)
 
     def __api_get_list_category(self) -> List[Category]:
         """Метод служит для получения от внешнего API списка категорий продаваемых товаров"""
@@ -221,7 +224,11 @@ class CategoryPool:
 
     def get_product(self, product_id: str) -> Optional[Product]:
         """Метод возвращает объект продукт из пула по указанному id"""
-        return self.__product_dict.get(product_id, None)
+        product = self.__product_dict.get(product_id, None)
+        if product is None:
+            dev_log.info(f"Товар с id {product_id} не был найден в пуле, выполняется запрос к API")
+            product = self.__api_get_product(product_id)
+        return product
 
     @execute_in_new_thread(daemon=False)
     def data_control(self) -> None:
