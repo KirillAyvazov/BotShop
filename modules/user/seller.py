@@ -31,7 +31,7 @@ class Seller(User):
 
         self.__get_active_orders()
 
-    @execute_in_new_thread
+    @execute_in_new_thread(daemon=True)
     def __get_active_orders(self) -> None:
         """Этот метод служит для инициализации объекта хранящего заказы и выполняется в отдельном потоке"""
         self.orders = SellerOrdersPool(self.tgId, self.orders_url)

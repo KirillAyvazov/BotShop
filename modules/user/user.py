@@ -324,7 +324,7 @@ class UserPool(ABC):
         """
         pass
 
-    @execute_in_new_thread(daemon=False)
+    @execute_in_new_thread(daemon=True)
     def data_control(self) -> None:
         """
             Этот метод - бесконечный цикл выполняемый в отдельном потоке - служит для контроля востребованности данных
