@@ -1,7 +1,7 @@
 from modules.configurator import Configurator
 from modules.logger import logger_init
 from modules.bot import BotShop, CommandPool, MessageContent
-from modules.user import ShopperPool
+from modules.user import ShopperPool, SellerPool
 from modules.products import CategoryPool
 
 
@@ -25,7 +25,6 @@ command_pool = CommandPool(bot)
 # Создаем хранилище данных покупателей
 shopper_pool = ShopperPool(shopper_url=configurator.api.shopper,
                            orders_url=configurator.api.order,
-                           product_url=configurator.api.product,
                            session_time=configurator.shopper_data.session_time)
 
 # Запускаем поток для контроля данных пользователей
@@ -33,6 +32,12 @@ shopper_pool.data_control()
 
 # Передаем пулу пользователей объект бот
 shopper_pool.add_bot(bot)
+
+
+# Создаем пул продавцов
+seller_pool = SellerPool(seller_url=configurator.api.shopper,
+                        orders_url=configurator.api.order,
+                        session_time=configurator.shopper_data.session_time)
 
 
 # Боту передаем хранилище данных покупаетелей

@@ -12,10 +12,9 @@ dev_log = get_development_logger(__name__)
 
 
 class ShopperOrdersPool:
-    def __init__(self, tgId: int, orders_url: str, product_url: str):
+    def __init__(self, tgId: int, orders_url: str):
         self.__tgId: int = tgId
         self.__url_order: str = orders_url
-        self.__product_url: str = product_url
         self.__order_schema = OrderSchema()
         self.__content_type: Dict[str, str] = {'Content-Type': 'application/json'}
         self.pool: Optional[List[Order]] = self.__api_get_orders()
@@ -32,9 +31,6 @@ class ShopperOrdersPool:
                 for i_dict in data:
                     i_dict['order_url'] = self.__url_order
                     i_dict['registered_on_server'] = True
-
-                    #for j_dict in i_dict.get('products', {}):
-                    #    j_dict['product_url'] = self.__product_url
 
                 return self.__order_schema.loads(json.dumps(data), many=True)
 

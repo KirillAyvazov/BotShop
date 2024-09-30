@@ -68,7 +68,6 @@ class User:
 
     def __init__(self, tg_id: int,
                  orders_url: str,
-                 product_url: str,
                  firstName: Optional[str] = None,
                  lastName: Optional[str] = None,
                  nickname: Optional[str] = None,
@@ -76,7 +75,6 @@ class User:
                  ):
         self.tgId: int = tg_id
         self.orders_url: str = orders_url
-        self.product_url: str = product_url
         self.firstName: Optional[str] = firstName
         self.lastName: Optional[str] = lastName
         self.nickname: Optional[str] = nickname
@@ -225,7 +223,6 @@ class UserSchema(Schema):
     nickname = fields.Str(allow_none=True)
     phoneNumber = fields.Str(allow_none=True)
     orders_url = fields.Str(required=True, allow_none=False)
-    product_url = fields.Str(required=True, allow_none=False)
 
 
 class UserPool(ABC):
@@ -236,11 +233,10 @@ class UserPool(ABC):
     осуществляться любое взаимодействие с объектами пользователей. Так же объект этого класса осуществляет взаимодействие
     с внешним API, удаленно хранящим данные пользователей
     """
-    def __init__(self, user_url: str, orders_url: str, product_url: str, user_schema, user_class,
+    def __init__(self, user_url: str, orders_url: str, user_schema, user_class,
                  session_time: Optional[int] = None):
         self._user_url: str = user_url
         self._orders_url: str = orders_url
-        self._product_url: str = product_url
         self._user_schema = user_schema()
         self.__user_class = user_class
         self._content_type: Dict[str, str] = {'Content-Type': 'application/json'}
@@ -261,7 +257,7 @@ class UserPool(ABC):
             self._pool[tg_id] = user
 
         if not user:
-            user = self.__user_class(tg_id, self._orders_url, self._product_url)
+            user = self.__user_class(tg_id, self._orders_url)
             self._pool[tg_id] = user
 
         user.update_activity_time()
@@ -282,7 +278,6 @@ class UserPool(ABC):
                     return data
 
                 data["orders_url"] = self._orders_url
-                data["product_url"] = self._product_url
                 return self._user_schema.loads(json.dumps(data), unknown='exclude')
 
             dev_log.info('Не удалось получить от сервера данные пользователя {}'.format(tg_id))

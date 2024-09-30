@@ -29,14 +29,13 @@ class Shopper(User):
     def __init__(self,
                  tgId: int,
                  orders_url: str,
-                 product_url: str,
                  firstName: Optional[str] = None,
                  lastName: Optional[str] = None,
                  nickname: Optional[str] = None,
                  phoneNumber: Optional[str] = None,
                  homeAddress: Optional[str] = None
                  ):
-        super().__init__(tgId, orders_url, product_url, firstName, lastName, nickname, phoneNumber)
+        super().__init__(tgId, orders_url, firstName, lastName, nickname, phoneNumber)
         self.homeAddress: Optional[str] = homeAddress
         self.__orders: Optional[ShopperOrdersPool] = None
         self.__personal_data_cache = self.__get_personal_data_cache()
@@ -83,7 +82,7 @@ class Shopper(User):
     def __get_orders(self) -> None:
         """Этот метод выполняется в отдельном потоке и служит для получения всех заказов пользователя"""
         with Semaphore():
-            self.__orders = ShopperOrdersPool(self.tgId, self.orders_url, self.product_url)
+            self.__orders = ShopperOrdersPool(self.tgId, self.orders_url)
 
     def get_orders(self) -> List[Order]:
         """При обращении к объекту пула заказов как к вызываемому объекту будет возвращен список заказов"""
@@ -122,8 +121,8 @@ class ShopperPool(UserPool):
     осуществляться любое взаимодействие с объектами покупателей. Так же объект этого класса осуществляет взаимодействие
     с внешним API, удаленно хранящим данные покупателей
     """
-    def __init__(self, shopper_url: str, orders_url: str, product_url: str, session_time: Optional[int] = None):
-        super().__init__(shopper_url, orders_url, product_url, ShopperSchema, Shopper, session_time)
+    def __init__(self, shopper_url: str, orders_url: str, session_time: Optional[int] = None):
+        super().__init__(shopper_url, orders_url, ShopperSchema, Shopper, session_time)
 
     def _save_user_data(self, list_shoppers: List[Shopper]) -> None:
         """
