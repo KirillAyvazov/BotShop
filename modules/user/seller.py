@@ -26,7 +26,7 @@ class Seller(User):
                  phoneNumber: Optional[str] = None,
                  ):
         super().__init__(tgId, orders_url, firstName, lastName, nickname, phoneNumber)
-        self.orders: Optional[SellerOrdersPool] = None
+        self.orders_pool: Optional[SellerOrdersPool] = None
         self.__personal_data_cache = self.__get_personal_data_cache()
 
         self.__get_active_orders()
@@ -34,21 +34,21 @@ class Seller(User):
     @execute_in_new_thread(daemon=True)
     def __get_active_orders(self) -> None:
         """Этот метод служит для инициализации объекта хранящего заказы и выполняется в отдельном потоке"""
-        self.orders = SellerOrdersPool(self.tgId, self.orders_url)
+        self.orders_pool = SellerOrdersPool(self.tgId, self.orders_url)
 
     def get_new_orders(self) -> List[Order]:
         """Метод возвращает список новых заказов"""
         time_start = time.time()
         while time.time() - time_start < 15:
-            if self.orders:
-                return self.orders.new
+            if self.orders_pool:
+                return self.orders_pool.new
 
     def get_current_orders(self) -> List[Order]:
         """Метод возвращает список текущих заказов"""
         time_start = time.time()
         while time.time() - time_start < 15:
-            if self.orders:
-                return self.orders.current
+            if self.orders_pool:
+                return self.orders_pool.current
 
     def __repr__(self) -> str:
         """
