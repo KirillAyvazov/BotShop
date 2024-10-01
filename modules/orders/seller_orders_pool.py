@@ -58,5 +58,15 @@ class SellerOrdersPool:
         self.new = result[0]
         self.current = result[1]
 
+    def move_an_order(self, order: Order) -> None:
+        """
+            Метод перемещает переданный в него заказ в соответсвующий его статусу список заказов - в новые, в
+        действующие или завершенные
+        """
+        if order.status in [2, 3, 4, 5, 6] and order in self.new:
+            self.new.remove(order)
+            self.current.append(order)
 
-
+        elif order.status in [7, 8, 9] and order in self.current:
+            self.current.remove(order)
+            self.completed.append(order)
