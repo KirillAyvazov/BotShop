@@ -67,6 +67,13 @@ class SellerOrdersPool:
             self.new.remove(order)
             self.current.append(order)
 
+        elif order.status in [7, 8, 9] and order in self.new:
+            self.new.remove(order)
+
         elif order.status in [7, 8, 9] and order in self.current:
             self.current.remove(order)
-            self.completed.append(order)
+
+        elif order.status == 1 and order in self.current:
+            self.current.remove(order)
+            self.new.append(order)
+

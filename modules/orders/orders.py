@@ -24,7 +24,7 @@ class Order:
         tgId: Optional[int] = None,
         status: int = 0,
         idOrder: Optional[int] = None,
-        datetimeCreation: Optional[str] = datetime.now().strftime("%d-%m-%Y %H:%M"),
+        datetimeCreation: Optional[str] = datetime.now().strftime("%d.%m.%Y %H:%M"),
         totalCost: Optional[int] = 0,
         delivery: bool = False,
         products_data: List[Dict[str, Any]] = list(),
@@ -136,7 +136,7 @@ class Order:
     def save_on_server(self):
         """Метод сохраняет данные о заказе на сервере, если это необходимо (заказ новый или был изменен"""
         if not self._registered_on_server:
-            self.datetimeUpdate = datetime.now()
+            self.datetimeUpdate = datetime.now().strftime("%d.%m.%Y %H:%M")
             self._api_post()
         elif self.is_updated():
             self.datetimeUpdate = datetime.now()
