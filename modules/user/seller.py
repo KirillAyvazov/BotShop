@@ -3,11 +3,15 @@
 пользователя являющегося потребителем и обработчиком заказов на приобретение товаров. Класс покупатель является
 дочерним для класса User.
 """
-from typing import Optional, List
+from typing import Optional, List, Dict, Any, Union, Callable
 import time
-from marshmallow import post_load
+import requests
+from marshmallow import post_load, Schema
+from telebot.types import Message
+import functools
 
-from .user import User, UserPool, UserSchema
+from .user import User, UserPool, UserSchema, fields
+from ..bot.message_deletion_blocker import dev_log
 from ..orders import SellerOrdersPool, Order
 from ..utils import execute_in_new_thread
 
@@ -27,6 +31,8 @@ class Seller(User):
                  ):
         super().__init__(tgId, orders_url, firstName, lastName, nickname, phoneNumber)
         self.orders_pool: Optional[SellerOrdersPool] = None
+        self.authorization: bool = False
+        self.status: Optional[str] = None
         self.__personal_data_cache = self.__get_personal_data_cache()
 
         self.__get_active_orders()
@@ -93,6 +99,19 @@ class SellerSchema(UserSchema):
         return seller
 
 
+class AuthorizationListSchema(Schema):
+    """Схема получения от сервера и передачи ему же данных об авторизации продавцов"""
+    tgId = fields.Int(required=True, allow_none=False)
+    phoneNumber = fields.Str(required=True, allow_none=False)
+    status = fields.Str(required=True, allow_none=False, load_only=True)
+
+
+class AuthorizationResponseSchema(Schema):
+    """Схема получения от сервера и передачи ему же данных об авторизации продавцов"""
+    authorized = fields.Boolean(required=True, allow_none=False, load_only=True)
+    status = fields.Str(required=False, allow_none=True, load_only=True, load_default="admin")   # АТРИБУТ load_default="admin" НУЖНО УБРАТЬ!!!
+
+
 class SellerPool(UserPool):
     """
         Этот класс предназначен для хранения коллекции продавцов в одном месте, предоставления быстрого доступа к
@@ -100,8 +119,68 @@ class SellerPool(UserPool):
     осуществляться любое взаимодействие с объектами продавцов. Так же объект этого класса осуществляет взаимодействие
     с внешним API, удаленно хранящим данные продавцов
     """
-    def __init__(self, seller_url: str, orders_url: str, session_time: Optional[int] = None):
+    def __init__(self, seller_url: str, orders_url: str, authorization_url: str, session_time: Optional[int] = None):
         super().__init__(seller_url, orders_url, SellerSchema, Seller, session_time)
+
+        self.__authorization_url: str = authorization_url
+        self.__authorization_list_schema = AuthorizationListSchema()
+        self.__authorization_response_schema = AuthorizationResponseSchema()
+        self.__content_type: Dict[str, str] = {'Content-Type': 'application/json'}
+
+    def __check_seller_authorization(self, seller: Seller) -> Seller:
+        """
+            Метод осуществляет проверку авторизации пользователя в качестве продавца путем выполнения запроса к API,
+        где хранятся списки продавцов и наделения соответствующих полей продавца необходимыми для авторизации значениями
+        """
+        result = self.__api_check_authorization(seller)
+
+        if result and result.get("authorized", False):
+            seller.authorization = True
+            seller.status = result.get("status", None)
+
+        return seller
+
+    def __api_check_authorization(self, seller: Seller) -> Dict[str, Any]:
+        """Метод выполняет запрос к API для проверки авторизации продавца"""
+        try:
+            data = self.__authorization_list_schema.dumps(seller)
+            print(data)
+            response = requests.post("/".join([self.__authorization_url, "check"]), data=data,
+                                     headers=self.__content_type)
+
+            if response.status_code == 200:
+                return self.__authorization_response_schema.loads(response.text)
+
+            dev_log.info(
+                f"Не удалось проверить авторизацию пользователя {seller.tgId} статус код {response.status_code}")
+
+        except Exception as ex:
+            dev_log.exception(f"Не удалось проверить авторизацию пользователя {seller.tgId} из-за ошибки",
+                              exc_info=ex)
+
+    def repeat_authorization(self, seller: Union[int, Message, Seller]) -> str:
+        if isinstance(seller, int):
+            seller = super().get(seller)
+
+        elif isinstance(seller, Message):
+            seller = super().get(seller.chat.id)
+
+        if seller.phoneNumber is None:
+            return "phone_number_is_none"
+
+        else:
+            seller = self.__check_seller_authorization(seller)
+            if seller.authorization:
+                return "ok"
+            return "no"
+
+    def get(self, tg_id: int) -> Seller:
+        """
+            Метод дополняет функционал метода родительского класса своим функционалом авторизации пользователя в
+        качестве продавца.
+        """
+        seller: Seller = super().get(tg_id=tg_id)  # Возвращается объект User, но считаем его как Seller
+        return self.__check_seller_authorization(seller)
 
     def _save_user_data(self, list_seller: List[Seller]) -> None:
         """
@@ -122,7 +201,32 @@ class SellerPool(UserPool):
             elif not i_seller.registered_on_server:
                 self._api_post(i_seller)
 
+    def access_control(self, status: List[str] = ["admin", "seller"]) -> Callable:
+        """
+            Метод - декоратор, предназначенный для контроля доступа пользователей к различным декорируемым функциям -
+        обработчикам сообщений
+        """
+        def decorator(func: Callable) -> Callable:
+            @functools.wraps(func)
+            def wrapped(*args, **kwargs) -> Callable:
+                messages = list(filter(lambda i_arg: isinstance(i_arg, Message), args))
+                if len(messages) > 0:
+                    message: Message = messages[0]
+                else:
+                    messages = list((filter(lambda i_arg: isinstance(i_arg, Message), kwargs.values())))
+                    message: Message = messages[0]
 
+                seller = super().get(message.chat.id)
+
+                if seller.authorization and seller.status in status:
+                    return func(*args, **kwargs)
+
+                else:
+                    if self._bot:
+                        self._bot.send_message(message.chat.id,
+                                               "У вас недостаточно прав для выполнения этого действия. Пожалуйста, авторизуйтесь")
+            return wrapped
+        return decorator
 
 
 

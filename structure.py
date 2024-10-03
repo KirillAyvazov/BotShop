@@ -37,6 +37,7 @@ shopper_pool.add_bot(bot)
 # Создаем пул продавцов
 seller_pool = SellerPool(seller_url=configurator.api.shopper,
                         orders_url=configurator.api.order,
+                        authorization_url=configurator.api.authorization_url,
                         session_time=configurator.shopper_data.session_time)
 
 

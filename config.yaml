@@ -11,6 +11,7 @@ api:
   order: http://45.141.78.238:5100/order
   category: http://45.141.78.238:5100/category
   product: http://45.141.78.238:5100/product
+  authorization_url: http://45.141.78.238:5100/seller
 
 shopper_data:
   session_time: 1200

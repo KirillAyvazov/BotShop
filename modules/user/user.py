@@ -280,7 +280,7 @@ class UserPool(ABC):
                 data["orders_url"] = self._orders_url
                 return self._user_schema.loads(json.dumps(data), unknown='exclude')
 
-            dev_log.info('Не удалось получить от сервера данные пользователя {}'.format(tg_id))
+            dev_log.info(f'Не удалось получить от сервера данные пользователя {tg_id}. Статус код {response.status_code}')
 
         except Exception as ex:
             dev_log.exception('При попытке получить от сервера данные пользователя {} произошла ошибка:'.format(tg_id),
