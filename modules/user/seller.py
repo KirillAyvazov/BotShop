@@ -33,6 +33,7 @@ class Seller(User):
         self.orders_pool: Optional[SellerOrdersPool] = None
         self.authorization: bool = False
         self.status: Optional[str] = None
+        self.authorization_counter: int = 0
         self.__personal_data_cache = self.__get_personal_data_cache()
 
         self.__get_active_orders()
@@ -144,7 +145,6 @@ class SellerPool(UserPool):
         """Метод выполняет запрос к API для проверки авторизации продавца"""
         try:
             data = self.__authorization_list_schema.dumps(seller)
-            print(data)
             response = requests.post("/".join([self.__authorization_url, "check"]), data=data,
                                      headers=self.__content_type)
 
@@ -180,7 +180,12 @@ class SellerPool(UserPool):
         качестве продавца.
         """
         seller: Seller = super().get(tg_id=tg_id)  # Возвращается объект User, но считаем его как Seller
-        return self.__check_seller_authorization(seller)
+
+        if seller.authorization_counter == 0:
+            self.__check_seller_authorization(seller)
+            seller.authorization_counter += 1
+
+        return seller
 
     def _save_user_data(self, list_seller: List[Seller]) -> None:
         """
@@ -225,6 +230,8 @@ class SellerPool(UserPool):
                     if self._bot:
                         self._bot.send_message(message.chat.id,
                                                "У вас недостаточно прав для выполнения этого действия. Пожалуйста, авторизуйтесь")
+                    dev_log.info(f"Неавторизованный пользователь {message.chat.id} пытается получить доступ к боту")
+
             return wrapped
         return decorator
 
