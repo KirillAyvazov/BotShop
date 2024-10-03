@@ -179,7 +179,7 @@ class SellerPool(UserPool):
             Метод дополняет функционал метода родительского класса своим функционалом авторизации пользователя в
         качестве продавца.
         """
-        seller: Seller = self.get(tg_id=tg_id)  # Возвращается объект User, но считаем его как Seller
+        seller: Seller = super().get(tg_id=tg_id)  # Возвращается объект User, но считаем его как Seller
 
         if seller.authorization_counter == 0:
             self.__check_seller_authorization(seller)
