@@ -103,7 +103,7 @@ class SellerSchema(UserSchema):
 class AuthorizationListSchema(Schema):
     """Схема получения от сервера и передачи ему же данных об авторизации продавцов"""
     tgId = fields.Int(required=True, allow_none=False)
-    phoneNumber = fields.Str(required=True, allow_none=False)
+    phoneNumber = fields.Str(required=True, dump_default="000")
     status = fields.Str(required=True, allow_none=False, load_only=True)
 
 
@@ -221,7 +221,7 @@ class SellerPool(UserPool):
                     messages = list((filter(lambda i_arg: isinstance(i_arg, Message), kwargs.values())))
                     message: Message = messages[0]
 
-                seller = super().get(message.chat.id)
+                seller = super().get(tg_id=message.chat.id)
 
                 if seller.authorization and seller.status in status:
                     return func(*args, **kwargs)
