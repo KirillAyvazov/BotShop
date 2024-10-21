@@ -2,19 +2,14 @@
     Данный модуль содержит реализацию класса Покупатель, сущность, при помощи которой телеграмм бот оперирует с данными
 пользователя являющегося источником заказов на приобретение товаров. Класс покупатель является дочерним для класса User.
 """
-import sys
 from marshmallow import fields, post_load
-from typing import Optional, List, Dict, Any
-import requests
+from typing import Optional, List
 import time
-from datetime import timedelta, datetime
 from threading import Semaphore
-import json
 
 from .user import User, UserPool, UserSchema
 from ..orders import ShopperOrdersPool, Order, Basket
 from ..logger import get_development_logger
-from ..products import Product
 from ..utils import execute_in_new_thread
 
 

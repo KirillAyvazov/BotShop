@@ -1,5 +1,4 @@
 from typing import Optional
-from telebot.types import Message
 from telebot.apihelper import ApiTelegramException
 
 from ..logger import get_development_logger

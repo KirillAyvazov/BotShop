@@ -2,6 +2,7 @@ from typing import List, Optional, Dict
 import requests
 import json
 from datetime import datetime
+import pytz
 
 from .orders import OrderSchema, Order, Basket
 from ..logger import get_development_logger
@@ -9,6 +10,7 @@ from ..utils import timer
 
 
 dev_log = get_development_logger(__name__)
+moscow_tz = pytz.timezone("Europe/Moscow")
 
 
 class ShopperOrdersPool:
@@ -55,7 +57,7 @@ class ShopperOrdersPool:
 
         else:
             basket = Basket(tgId=self.__tgId, order_url=self.__url_order,
-                            datetimeCreation=datetime.now().strftime("%d.%m.%Y %H:%M"))
+                            datetimeCreation=datetime.now(moscow_tz).strftime("%d.%m.%Y %H:%M"))
 
         return basket
 
@@ -67,4 +69,4 @@ class ShopperOrdersPool:
         self.basket.create_new_order()
         self.pool.append(self.basket)
         self.basket = Basket(tgId=self.__tgId, order_url=self.__url_order,
-                             datetimeCreation=datetime.now().strftime("%d.%m.%Y %H:%M"))
+                             datetimeCreation=datetime.now(moscow_tz).strftime("%d.%m.%Y %H:%M"))

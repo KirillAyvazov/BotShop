@@ -9,6 +9,7 @@
 from sqlalchemy import Column, Integer, String, PrimaryKeyConstraint, DateTime, create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from datetime import datetime, timedelta
+import pytz
 from typing import List, Literal, Dict, Any, Callable, Optional, Tuple, Union
 import os
 from queue import Queue, LifoQueue
@@ -27,6 +28,7 @@ from ..utils import execute_in_new_thread
 
 
 dev_log = get_development_logger(__name__)
+moscow_tz = pytz.timezone("Europe/Moscow")
 
 Base = declarative_base()
 
@@ -50,7 +52,7 @@ class UserTable(Base):
     tgId = Column(Integer)
     message_id_bot_to_user = Column(String, nullable=False, default='')
     message_id_user_to_bot = Column(String, nullable=False, default='')
-    last_session = Column(DateTime, default=datetime.now())
+    last_session = Column(DateTime, default=datetime.now(moscow_tz))
 
     __table_args__ = (
         PrimaryKeyConstraint('tgId'),
@@ -174,7 +176,7 @@ class User:
             Метод обновляет дату и время последней активности пользователя. Функция применяется для контроля свежести
         данных пользователя
         """
-        self.last_session = datetime.now()
+        self.last_session = datetime.now(moscow_tz)
 
     def saving_to_local_db(self) -> None:
         """Метод сохраняет (обновляет) необходимые для корректной работы данные пользователя в локальную базу данных"""
@@ -334,7 +336,7 @@ class UserPool(ABC):
         time_delta = timedelta(seconds=self._session_time)
         while self._session_time:
             time.sleep(self._session_time // 2)
-            list_user_to_delete = list(filter(lambda i_user: datetime.now() - i_user.last_session > time_delta,
+            list_user_to_delete = list(filter(lambda i_user: datetime.now(moscow_tz) - i_user.last_session > time_delta,
                                                  self._pool.values()))
 
             self._save_user_data(list_user_to_delete)

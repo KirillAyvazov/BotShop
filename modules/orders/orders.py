@@ -2,13 +2,13 @@
     Данный модуль содержит реализацию модели заказа пользователей и реализацию объекта - пула заказа, объекта при
 помощи которого осуществляется хранение, доступ и редактирование заказов пользователя.
 """
-from marshmallow import Schema, fields, post_load, validate, pre_dump
+from marshmallow import Schema, fields, post_load, validate
 from typing import Optional, List, Dict, Union, Any
 import requests
-from copy import deepcopy
 from datetime import datetime
+import pytz
 
-from ..products import Product, ProductSchema
+from ..products import Product
 from ..logger import get_development_logger
 from ..utils import ProjectCache, DataTunnel
 
@@ -16,6 +16,7 @@ from ..utils import ProjectCache, DataTunnel
 dev_log = get_development_logger(__name__)
 product_cache = ProjectCache()
 data_tunnel = DataTunnel()
+moscow_tz = pytz.timezone("Europe/Moscow")
 
 
 class Order:
@@ -24,7 +25,7 @@ class Order:
         tgId: Optional[int] = None,
         status: int = 0,
         idOrder: Optional[int] = None,
-        datetimeCreation: Optional[str] = datetime.now().strftime("%d.%m.%Y %H:%M"),
+        datetimeCreation: Optional[str] = datetime.now(moscow_tz).strftime("%d.%m.%Y %H:%M"),
         totalCost: Optional[int] = 0,
         delivery: bool = False,
         products_data: List[Dict[str, Any]] = list(),
@@ -136,10 +137,10 @@ class Order:
     def save_on_server(self):
         """Метод сохраняет данные о заказе на сервере, если это необходимо (заказ новый или был изменен"""
         if not self._registered_on_server:
-            self.datetimeUpdate = datetime.now().strftime("%d.%m.%Y %H:%M")
+            self.datetimeUpdate = datetime.now(moscow_tz).strftime("%d.%m.%Y %H:%M")
             self._api_post()
         elif self.is_updated():
-            self.datetimeUpdate = datetime.now()
+            self.datetimeUpdate = datetime.now(moscow_tz).strftime("%d.%m.%Y %H:%M")
             self._api_put()
             self._control_hash = self._get_hash_sum()
 
@@ -192,7 +193,7 @@ class Order:
         return '\n\n'.join(text)
 
     def get_order_status(self) -> str:
-        '''Метод возвращает человекочитаемый статус заказа'''
+        """Метод возвращает человекочитаемый статус заказа"""
         if self.status == 0:
             return 'корзина'
         elif self.status == 1:
@@ -336,7 +337,7 @@ class Basket(Order):
             Метод создает из корзины новый заказ и отправляет его на сервер. Данный метод предназначен для использования
         в методах класса ShopperOrdersPool, но его НЕЛЬЗЯ использовать самостоятельно!!!
         """
-        self.datetimeCreation = datetime.now().strftime("%d.%m.%Y %H:%M")
+        self.datetimeCreation = datetime.now(moscow_tz).strftime("%d.%m.%Y %H:%M")
         self.status = 1
         self.save_on_server()
 

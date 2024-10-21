@@ -2,7 +2,6 @@ from typing import List, Optional, Dict
 import requests
 import json
 from multiprocessing.pool import ThreadPool
-from datetime import datetime
 
 from .orders import OrderSchema, Order
 from ..logger import get_development_logger

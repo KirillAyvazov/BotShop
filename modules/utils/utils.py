@@ -7,6 +7,7 @@ import functools
 from threading import Thread, Semaphore
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+import pytz
 import time
 from sys import getsizeof
 
@@ -14,6 +15,7 @@ from ..logger import get_development_logger
 
 
 dev_log = get_development_logger(__name__)
+moscow_tz = pytz.timezone("Europe/Moscow")
 
 
 def execute_in_new_thread(_func: Optional[Callable] = None, *, daemon: bool = False) -> Callable:
@@ -78,7 +80,7 @@ class ProjectCache:
             data = self.__memory.get(key, None)
 
             if data is None:
-                data = self.Data(func(*args, **kwargs), datetime.now())
+                data = self.Data(func(*args, **kwargs), datetime.now(moscow_tz))
                 if not data.result is None:
                     self.__memory[key] = data
 
@@ -98,7 +100,7 @@ class ProjectCache:
             start_size = getsizeof(self.__memory)
 
             for i_key, i_data in list(self.__memory.items()):
-                if datetime.now() - i_data.saving_time > timedelta(seconds=43200):
+                if datetime.now(moscow_tz) - i_data.saving_time > timedelta(seconds=43200):
                     with Semaphore():
                         self.__memory.pop(i_key)
 
