@@ -97,6 +97,11 @@ class Shopper(User):
         """Метод создает новый заказ из корзины пользователя"""
         self.__orders.create_new_order()
 
+    def update_orders(self) -> None:
+        """Метод обновляет заказы пользователя"""
+        with Semaphore():
+            self.__orders = ShopperOrdersPool(self.tgId, self.orders_url)
+
 
 class ShopperSchema(UserSchema):
     """Класс - схема данных предназначенная для валидации данных покупателя получаемых от внешнего API"""

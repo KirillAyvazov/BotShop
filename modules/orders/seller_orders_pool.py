@@ -23,7 +23,6 @@ class SellerOrdersPool:
 
         self.__get_orders()
 
-    @timer
     def __api_get_orders(self, status: str, start: int = 1, stop: int = 100) -> List[Order]:
         """Метод получает от внешнего API список заказов по указанному статусу"""
         try:

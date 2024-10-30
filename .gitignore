@@ -3,4 +3,6 @@ log_data/
 .idea/
 __pycache__/
 test_main.py
-
+git_hub
+git_hub.pub
+.venv

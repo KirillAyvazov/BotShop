@@ -6,8 +6,8 @@
 данные необходимы для реализации исчезающих сообщений и завершения сессии пользователя.
 """
 
-from sqlalchemy import Column, Integer, String, PrimaryKeyConstraint, DateTime, create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy import Column, Integer, String, PrimaryKeyConstraint, DateTime, create_engine, ForeignKeyConstraint
+from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from datetime import datetime, timedelta
 import pytz
 from typing import List, Literal, Dict, Any, Callable, Optional, Tuple, Union
@@ -53,11 +53,25 @@ class UserTable(Base):
     message_id_bot_to_user = Column(String, nullable=False, default='')
     message_id_user_to_bot = Column(String, nullable=False, default='')
     last_session = Column(DateTime, default=datetime.now(moscow_tz))
+    notifications = relationship("NotificationTable")
 
     __table_args__ = (
         PrimaryKeyConstraint('tgId'),
     )
 
+
+class NotificationTable(Base):
+    """Класс - модель таблицы для хранения id уведомлений пользователей"""
+    __tablename__ = 'notification'
+
+    id = Column(Integer)
+    user_id = Column(Integer)
+    notification_id = Column(Integer)
+
+    __table_args__ = (
+        PrimaryKeyConstraint('id'),
+        ForeignKeyConstraint(["user_id"], ["user.tgId"])
+    )
 
 Base.metadata.create_all(engine)
 
@@ -216,6 +230,26 @@ class User:
         func: Callable = self.__queue_of_steps.get()
         return func(message)
 
+    def get_notification_id(self, delete=False) -> List[int]:
+        """
+            Метод возвращает список id уведомлений отправленных пользователю. Если передать параметр delete=True - эти
+        сообщения будут удалены из базы данных
+        """
+        user: UserTable = session.query(UserTable).get(self.tgId)
+        list_notifications_id = [i_notification.notification_id for i_notification in user.notifications]
+
+        if delete:
+            try:
+                for i_notification in user.notifications:
+                    session.delete(i_notification)
+                    session.commit()
+            except Exception as ex:
+                dev_log.exception(f"Не удалось удалить из базы данных"
+                                  f"уведомления пользователя {self.tgId}", exc_info=ex)
+                session.rollback()
+
+        return list_notifications_id
+
 
 class UserSchema(Schema):
     """Класс - схема данных предназначенная для валидации данных пользователя получаемых от внешнего API"""
@@ -340,6 +374,7 @@ class UserPool(ABC):
                                                  self._pool.values()))
 
             self._save_user_data(list_user_to_delete)
+            self._delete_user_notifications(list_user_to_delete)
 
             new_pool = {i_id: i_user for i_id, i_user in self._pool.items()
                         if i_user not in list_user_to_delete}
@@ -352,3 +387,31 @@ class UserPool(ABC):
             dev_log.debug('Размер пула покупателей до/после очищения: {}/{}'.format(initial_pool_size,
                                                                                     final_size_pool))
             new_pool = None
+
+    def is_active(self, tg_id) -> bool:
+        """
+            Метод для проверки - является ли пользователь активным. Метод проверяет, зарегистрирован ли какой-либо
+        объект пользователя в пуле пользователей по указанному id
+        """
+        return tg_id in self._pool.keys()
+
+    def _delete_user_notifications(self, user_list) -> None:
+        """Метод предназначен для удаления уведомлений в чатах пользователей, список которых был передан на вход метода"""
+        if self._bot:
+            for i_user in user_list:
+                i_user: User
+                for i_notification_id in i_user.get_notification_id(delete=True):
+                    self._bot.delete_message(i_user.tgId, i_notification_id)
+
+    @classmethod
+    def add_notification_id(cls, user_id, notification_id) -> None:
+        """Метод предназначен для сохранения в локальной базе данных id отправленного пользователю уведомления"""
+        new_notification = NotificationTable(user_id=user_id, notification_id=notification_id)
+        try:
+            session.add(new_notification)
+            session.commit()
+
+        except Exception as ex:
+            dev_log.exception(f"Не удалось добавить в базу данных id {notification_id} "
+                              f"уведомления пользователя {user_id}", exc_info=ex)
+            session.rollback()

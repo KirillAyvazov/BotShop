@@ -9,6 +9,7 @@ import requests
 from marshmallow import post_load, Schema
 from telebot.types import Message
 import functools
+from threading import Semaphore
 
 from .user import User, UserPool, UserSchema, fields
 from ..bot.message_deletion_blocker import dev_log
@@ -41,7 +42,17 @@ class Seller(User):
     @execute_in_new_thread(daemon=True)
     def __get_active_orders(self) -> None:
         """Этот метод служит для инициализации объекта хранящего заказы и выполняется в отдельном потоке"""
-        self.orders_pool = SellerOrdersPool(self.tgId, self.orders_url)
+        with Semaphore():
+            self.orders_pool = SellerOrdersPool(self.tgId, self.orders_url)
+
+    def update_active_orders(self):
+        """
+            Данный метод служит для обновления активных заказов и может быть использован в API бота для выполнения
+        команды от другой управляющей сущности
+        """
+        with Semaphore():
+            self.orders_pool = None
+            self.orders_pool = SellerOrdersPool(self.tgId, self.orders_url)
 
     def get_new_orders(self) -> List[Order]:
         """Метод возвращает список новых заказов"""
@@ -234,26 +245,4 @@ class SellerPool(UserPool):
 
             return wrapped
         return decorator
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

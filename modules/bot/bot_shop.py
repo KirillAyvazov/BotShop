@@ -144,7 +144,15 @@ class BotShop(TeleBot):
     def notify_user(self, user_id: int, message: str) -> None:
         """Метод отправляет пользователю уведомление с заданным текстом"""
         with MessageDeletionBlocker(self):
-            self.send_message(user_id, message)
+            try:
+                message = '\n'.join(["<b>Новое уведомление ✉️:</b>", message])
+                message = self.send_message(user_id, message)
+
+                if self.user_pool:
+                    self.user_pool.add_notification_id(user_id, message.id)
+
+            except ApiTelegramException as ex:
+                dev_log.exception(f'Не удалось отправить сообщение пользователю {user_id} из-за ошибки:', exc_info=ex)
 
     def polling(self, *args, **kwargs) -> None:
         """

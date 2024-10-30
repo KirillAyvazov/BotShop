@@ -22,7 +22,6 @@ class ShopperOrdersPool:
         self.pool: Optional[List[Order]] = self.__api_get_orders()
         self.basket: Optional[Basket] = self.__basket_search()
 
-    @timer
     def __api_get_orders(self) -> List[Order]:
         """Метод получает от внешнего API список заказов"""
         try:
