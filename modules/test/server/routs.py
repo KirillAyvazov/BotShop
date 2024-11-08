@@ -1,9 +1,9 @@
-from flask import Flask, jsonify, request
 import random
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
-from .model import db, User
+from flask import Flask, jsonify, request
 
+from .model import User, db
 
 valid_user_key = [
     "tgId",

@@ -3,16 +3,16 @@
 пользователя являющегося источником заказов на приобретение товаров. Класс покупатель является дочерним для класса User.
 """
 
-from marshmallow import fields, post_load
-from typing import Optional, List
 import time
 from threading import Semaphore
+from typing import List, Optional
 
-from .user import User, UserPool, UserSchema
-from ..orders import ShopperOrdersPool, Order, Basket
+from marshmallow import fields, post_load
+
 from ..logger import get_development_logger
+from ..orders import Basket, Order, ShopperOrdersPool
 from ..utils import execute_in_new_thread
-
+from .user import User, UserPool, UserSchema
 
 dev_log = get_development_logger(__name__)
 

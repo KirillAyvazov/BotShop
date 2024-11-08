@@ -1,6 +1,6 @@
-from faker import Faker
 from typing import Optional
 
+from faker import Faker
 
 fake = Faker("ru_RU")
 

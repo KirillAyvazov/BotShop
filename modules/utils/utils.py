@@ -3,17 +3,17 @@
 узко-направленные задачи
 """
 
-from typing import Callable, Optional, Any, Union, List, Tuple, Dict
 import functools
-from threading import Thread, Semaphore
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-import pytz
-import time
 from sys import getsizeof
+from threading import Semaphore, Thread
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+
+import pytz
 
 from ..logger import get_development_logger
-
 
 dev_log = get_development_logger(__name__)
 moscow_tz = pytz.timezone("Europe/Moscow")

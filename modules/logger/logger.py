@@ -5,9 +5,8 @@
 """
 
 import logging.config
-import sys
 import os
-
+import sys
 
 path = "log_data"
 if not os.path.exists(path):

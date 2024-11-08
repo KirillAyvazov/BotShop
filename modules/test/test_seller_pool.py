@@ -1,8 +1,8 @@
 import time
 
-from modules.user.seller import Seller
-from modules.test.server.random_data import UserFaker
 from modules.test.server.model import User
+from modules.test.server.random_data import UserFaker
+from modules.user.seller import Seller
 
 
 def test_normal_conditions(seller_pool, data_base, user_id):

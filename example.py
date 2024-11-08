@@ -2,13 +2,13 @@
 
 from telebot.types import Message
 
+from modules.bot import BotShop, Command, CommandPool, MessageContent
+
 # Осуществляем необходимые импорты:
 from modules.configurator import Configurator
 from modules.logger import logger_init
-from modules.bot import BotShop, CommandPool, MessageContent, Command
-from modules.user import ShopperPool, SellerPool
 from modules.products import CategoryPool
-
+from modules.user import SellerPool, ShopperPool
 
 # КОНФИГУРАТОР
 # Создаём объект - конфигуратор. Объект, хранящий все настройки проекта

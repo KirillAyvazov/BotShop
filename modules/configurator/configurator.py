@@ -8,13 +8,13 @@ create, при наличии которого путь будет создан
 """
 
 import os
-import yaml
-import dotenv
-from typing import Dict, Any, Union
 from dataclasses import dataclass
+from typing import Any, Dict, Union
+
+import dotenv
+import yaml
 
 from ..utils import singleton
-
 
 dotenv.load_dotenv()
 

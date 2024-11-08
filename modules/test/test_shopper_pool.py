@@ -1,8 +1,8 @@
 import time
 
-from modules.user.shopper import Shopper
-from modules.test.server.random_data import UserFaker
 from modules.test.server.model import User
+from modules.test.server.random_data import UserFaker
+from modules.user.shopper import Shopper
 
 
 def test_normal_conditions(shopper_pool, data_base, user_id):

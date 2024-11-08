@@ -6,34 +6,34 @@
 данные необходимы для реализации исчезающих сообщений и завершения сессии пользователя.
 """
 
+import json
+import os
+import sys
+import time
+from abc import ABC
+from datetime import datetime, timedelta
+from queue import LifoQueue, Queue
+from threading import Semaphore
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union
+
+import pytz
+import requests
+from marshmallow import Schema, fields
 from sqlalchemy import (
     Column,
-    Integer,
-    String,
-    PrimaryKeyConstraint,
     DateTime,
-    create_engine,
     ForeignKeyConstraint,
+    Integer,
+    PrimaryKeyConstraint,
+    String,
+    create_engine,
 )
-from sqlalchemy.orm import sessionmaker, declarative_base, relationship
-from datetime import datetime, timedelta
-import pytz
-from typing import List, Literal, Dict, Any, Callable, Optional, Union, Tuple
-import os
-from queue import Queue, LifoQueue
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from telebot.types import Message
-import requests
-import json
-from abc import ABC
-import time
-from threading import Semaphore
-import sys
-from marshmallow import Schema, fields
 
 from ..logger import get_development_logger
 from ..products import Product
 from ..utils import execute_in_new_thread
-
 
 dev_log = get_development_logger(__name__)
 moscow_tz = pytz.timezone("Europe/Moscow")

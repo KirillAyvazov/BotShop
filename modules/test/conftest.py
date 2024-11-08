@@ -1,11 +1,12 @@
-import pytest
 import random
 
-from modules.user.shopper import ShopperPool
-from modules.user.seller import SellerPool
+import pytest
+
 from modules.test.server.app import create_app
-from modules.test.server.random_data import UserFaker
 from modules.test.server.model import db
+from modules.test.server.random_data import UserFaker
+from modules.user.seller import SellerPool
+from modules.user.shopper import ShopperPool
 
 
 @pytest.fixture()

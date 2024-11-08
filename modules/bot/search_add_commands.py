@@ -5,8 +5,10 @@
 
 from dataclasses import dataclass
 from typing import List
-from .bot_shop import BotShop
+
 from telebot.types import BotCommand
+
+from .bot_shop import BotShop
 
 
 @dataclass

@@ -3,18 +3,19 @@
 продаваемыми в магазине товарами.
 """
 
-import os.path
-from typing import List, Dict, Optional, Any
-from telebot.types import InputMediaPhoto
-import requests
-from multiprocessing.pool import ThreadPool
-from marshmallow import Schema, fields, post_load
-import time
-from threading import Semaphore
 import json
+import os.path
+import time
+from multiprocessing.pool import ThreadPool
+from threading import Semaphore
+from typing import Any, Dict, List, Optional
+
+import requests
+from marshmallow import Schema, fields, post_load
+from telebot.types import InputMediaPhoto
 
 from ..logger import get_development_logger
-from ..utils import execute_in_new_thread, ProjectCache, DataTunnel
+from ..utils import DataTunnel, ProjectCache, execute_in_new_thread
 
 dev_log = get_development_logger(__name__)
 modul_cache = ProjectCache()

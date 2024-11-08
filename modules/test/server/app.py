@@ -1,11 +1,12 @@
-from flask import Flask
-from threading import Thread
-import time
 import os
+import time
+from threading import Thread
 
+from flask import Flask
+
+from .. import project_path
 from .model import db
 from .routs import create_routs
-from .. import project_path
 
 
 class FlaskTestServer(Flask):

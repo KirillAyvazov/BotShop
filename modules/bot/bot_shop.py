@@ -5,15 +5,15 @@
 некоторые методы
 """
 
-from telebot import TeleBot
-from telebot.types import Message, InputMediaPhoto
-from telebot.apihelper import ApiTelegramException
-from typing import Callable, List, Optional
 import functools
+from typing import Callable, List, Optional
+
+from telebot import TeleBot
+from telebot.apihelper import ApiTelegramException
+from telebot.types import InputMediaPhoto, Message
 
 from ..logger import get_development_logger
 from .message_deletion_blocker import MessageDeletionBlocker
-
 
 dev_log = get_development_logger(__name__)
 

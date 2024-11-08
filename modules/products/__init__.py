@@ -1,1 +1,1 @@
-from .products import Product, ProductSchema, Category, CategoryPool
+from .products import Category, CategoryPool, Product, ProductSchema

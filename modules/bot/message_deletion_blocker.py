@@ -1,8 +1,8 @@
 from typing import Optional
+
 from telebot.apihelper import ApiTelegramException
 
 from ..logger import get_development_logger
-
 
 dev_log = get_development_logger(__name__)
 

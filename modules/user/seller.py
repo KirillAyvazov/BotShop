@@ -4,18 +4,19 @@
 дочерним для класса User.
 """
 
-from typing import Optional, List, Dict, Any, Union, Callable
-import time
-import requests
-from marshmallow import post_load, Schema
-from telebot.types import Message
 import functools
+import time
 from threading import Semaphore
+from typing import Any, Callable, Dict, List, Optional, Union
 
-from .user import User, UserPool, UserSchema, fields
+import requests
+from marshmallow import Schema, post_load
+from telebot.types import Message
+
 from ..bot.message_deletion_blocker import dev_log
-from ..orders import SellerOrdersPool, Order
+from ..orders import Order, SellerOrdersPool
 from ..utils import execute_in_new_thread
+from .user import User, UserPool, UserSchema, fields
 
 
 class Seller(User):

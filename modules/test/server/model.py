@@ -1,7 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import Column, Integer, PrimaryKeyConstraint, String
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, Integer, String, PrimaryKeyConstraint
-
 
 Base = declarative_base()
 db = SQLAlchemy(model_class=Base)

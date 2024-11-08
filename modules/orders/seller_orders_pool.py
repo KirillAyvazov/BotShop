@@ -1,12 +1,12 @@
-from typing import List, Optional, Dict
-import requests
 import json
 from multiprocessing.pool import ThreadPool
+from typing import Dict, List, Optional
 
-from .orders import OrderSchema, Order
+import requests
+
 from ..logger import get_development_logger
 from ..utils import timer
-
+from .orders import Order, OrderSchema
 
 dev_log = get_development_logger(__name__)
 
