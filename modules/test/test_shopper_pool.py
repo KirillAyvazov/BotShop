@@ -1,6 +1,4 @@
 import time
-import pytest
-import pytz
 
 from modules.user.shopper import Shopper
 from modules.test.server.random_data import UserFaker
@@ -246,7 +244,7 @@ def test_recovery_connection(shopper_pool, user_id, url_no_valid, shopper_url, d
     assert user.is_changed() == False
 
 
-def test_no_connection_and_change_user(shopper_pool, user_id, url_no_valid, shopper_url, data_base):
+def test_no_connection_and_change_user_part_1(shopper_pool, user_id, url_no_valid, shopper_url, data_base):
     """
         Тест работы пула покупателей в условиях неудавшегося запроса к API на этапе получения данных пользователя.
     Предполагаем что объект пользователя после получения данных был изменен. После неудачной попытки отправить данные
@@ -271,11 +269,8 @@ def test_no_connection_and_change_user(shopper_pool, user_id, url_no_valid, shop
         - проверяем что значения атрибутов объекта user registered_on_server (зарегистрирован на сервере) = False и
             is_changed(изменен) = True;
         - проверяем, что размер пула равен нулю;
-
-
         - сравниваем все исходные значения полей пользователя с теми что находятся в базе данных;
     """
-    print("ТОТ САМЫЙ ТЕСТ")
     setattr(shopper_pool, "_user_url", url_no_valid)
 
     user = shopper_pool.get(user_id)
@@ -320,6 +315,83 @@ def test_no_connection_and_change_user(shopper_pool, user_id, url_no_valid, shop
 
     assert shopper_pool.get_pool_size() == 0
 
+    user_from_db = data_base.session.get(User, user_id)
+    assert isinstance(user_from_db, User)
+    assert user_fake.tgId == user_from_db.tgId
+    assert user_fake.firstName == user_from_db.firstName
+    assert user_fake.lastName == user_from_db.lastName
+    assert user_fake.nickname == user_from_db.nickname
+    assert user_fake.phoneNumber == user_from_db.phoneNumber
+    assert user_fake.homeAddress == user_from_db.homeAddress
 
 
+def test_no_connection_and_change_user_part_2(shopper_pool, user_id, url_no_valid, shopper_url, data_base):
+    """
+        Тест работы пула покупателей в условиях неудавшегося запроса к API на этапе передачи данных пользователя.
+    Предполагаем что объект пользователя после успешного получения данных был изменен. После неудачной попытки отправить данные
+    пользователя на сервер, объект пользователя должен остаться в пуле. После восстановления связи с сервером, по
+    завершении сессии пользователя объект должен быть удален из пула, данные на сервере должны быть изменены правильно -
+    то есть должны быть обновлены только измененные поля.
+        - получаем данные пользователя, который был зарегистрирован в тесте test_normal_conditions;
+        - проверяем что значения атрибутов объекта user registered_on_server (зарегистрирован на сервере) = True и
+            is_changed(изменен) = False
+        - проверяем, что размер пула равен 1;
+        - меняем значение одного поля пользователя;
+        - проверяем что значения атрибутов объекта user registered_on_server (зарегистрирован на сервере) = True и
+            is_changed(изменен) = True;
+        - ломаем url для получения данных пользователей;
+        - делаем один шаг метода контроля данных;
+        - проверяем, что размер пула равен 1;
+        - проверяем что значения атрибутов объекта user registered_on_server (зарегистрирован на сервере) = True и
+            is_changed(изменен) = True
+        - восстанавливаем url для получения данных пользователей;
+        - делаем один шаг метода контроля данных;
+        - проверяем что значения атрибутов объекта user registered_on_server (зарегистрирован на сервере) = True и
+            is_changed(изменен) = False
+        - проверяем, что размер пула равен 0;
+        - сравниваем все исходные значения полей пользователя с теми что находятся в базе данных;
+    """
+    user = shopper_pool.get(user_id)
 
+    assert user.registered_on_server == True
+    assert user.is_changed() == False
+
+    assert shopper_pool.get_pool_size() == 1
+
+    user_fake = UserFaker.get_fake_user(user_id)
+    user_fake.homeAddress = "Тестовый адрес"
+    user.homeAddress = user_fake.homeAddress
+
+    assert user.registered_on_server == True
+    assert user.is_changed() == True
+
+    setattr(shopper_pool, "_user_url", url_no_valid)
+
+    time.sleep(0.1)
+    shopper_pool.data_control(test_step=2)
+    time.sleep(0.1)
+
+    assert shopper_pool.get_pool_size() == 1
+
+    assert user.registered_on_server == True
+    assert user.is_changed() == True
+
+    setattr(shopper_pool, "_user_url", shopper_url)
+
+    time.sleep(0.1)
+    shopper_pool.data_control(test_step=2)
+    time.sleep(0.1)
+
+    assert user.registered_on_server == True
+    assert user.is_changed() == False
+
+    assert shopper_pool.get_pool_size() == 0
+
+    user_from_db = data_base.session.get(User, user_id)
+    assert isinstance(user_from_db, User)
+    assert user_fake.tgId == user_from_db.tgId
+    assert user_fake.firstName == user_from_db.firstName
+    assert user_fake.lastName == user_from_db.lastName
+    assert user_fake.nickname == user_from_db.nickname
+    assert user_fake.phoneNumber == user_from_db.phoneNumber
+    assert user_fake.homeAddress == user_from_db.homeAddress

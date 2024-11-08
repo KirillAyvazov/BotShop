@@ -391,7 +391,6 @@ class UserPool(ABC):
         изменены его данные - отправляет эти изменения на сервер. Если покупатель не был зарегистрирован на сервере -
         делается пост запрос с его данными на сервер.
         """
-        print("*"*20)
         for i_user in list_user:
             if self._bot:
                 self._bot.close_session(i_user.tgId)
@@ -399,7 +398,6 @@ class UserPool(ABC):
             i_user.saving_to_local_db()
 
             result = False
-
             if i_user.registered_on_server and i_user.is_changed():
                 result = self._api_put(i_user)
 
@@ -409,12 +407,25 @@ class UserPool(ABC):
             elif not i_user.registered_on_server and i_user.is_changed():
                 result = self._api_post(i_user)
                 if not result:
-                    result = self._api_put(i_user)
+                    restore_data = self.__restoring_original_data(i_user)
+                    if restore_data:
+                        result = self._api_put(i_user)
 
             if result:
                 i_user.update_personal_data_cache()
                 i_user.registered_on_server = True
 
+    def __restoring_original_data(self, user) -> bool:
+        """
+            Данный метод предназначен для получения данных зарегистрированного пользователя с сервера в случаях, когда
+        пользователь из-за перебоев с сетью был помечен ботом как незарегистрированный пользователь
+        """
+        old_user_data: Dict[str, Any] = self._api_get(tg_id=user.tgId, get_user_object=False)
+        if old_user_data:
+            for i_attr_name, i_val in old_user_data.items():
+                if not getattr(user, i_attr_name, None):
+                    setattr(user, i_attr_name, i_val)
+            return True
 
     @execute_in_new_thread(daemon=True)
     def data_control(self, *, test_step: Optional[int] = None, test_session_time: Optional[int] = None) -> None:
