@@ -103,7 +103,6 @@ class User:
         self.last_session: Optional[datetime] = None
         self.__queue_of_steps = LifoQueue(40)
         self.registered_on_server: bool = False
-        self.no_connection_server: bool = True
         self.product_index: int = 0
         self.order_index: int = 0
         self.category_index: int = 0
@@ -316,24 +315,19 @@ class UserPool(ABC):
         """
         user = self._pool.get(tg_id, None)
 
-        no_connect_server = True
         if not user:
-            user, no_connect_server = self._api_get(tg_id)
-            if user:
-                user.no_connection_server = no_connect_server
-                self._pool[tg_id] = user
+            user = self._api_get(tg_id)
+            self._pool[tg_id] = user
 
         if not user:
             user = self.__user_class(tg_id, self._orders_url)
-            user.no_connection_server = no_connect_server
             self._pool[tg_id] = user
 
         user.update_activity_time()
 
         return user
 
-    def _api_get(self, tg_id: int, get_user_object: bool = True) -> (
-            Tuple)[Union[Optional[User], Optional[Dict[str, Any]]], bool]:
+    def _api_get(self, tg_id: int, get_user_object: bool = True) -> Union[Optional[User], Optional[Dict[str, Any]]]:
         """
             Метод реализует получение данных пользователя от внешнего API. Если аргумент get_user_object = True,
         метод вернет объект пользователя, если False - словарь с данными пользователя
@@ -349,18 +343,13 @@ class UserPool(ABC):
                 data["orders_url"] = self._orders_url
                 user = self._user_schema.loads(json.dumps(data), unknown='exclude')
                 user.registered_on_server = True
-                return user, False
+                return user
 
             dev_log.info(f'Не удалось получить от сервера данные пользователя {tg_id}. Статус код {response.status_code}')
-
-            return None, True
 
         except Exception as ex:
             dev_log.exception('При попытке получить от сервера данные пользователя {} произошла ошибка:'.format(tg_id),
                               exc_info=ex)
-
-            return None, True
-
 
     def _api_put(self, user: User) -> Optional[bool]:
         """Метод осуществляет сохранение измененных данных пользователя на внешнем сервере"""
@@ -410,27 +399,17 @@ class UserPool(ABC):
             i_user.saving_to_local_db()
 
             result = False
-            if not i_user.no_connection_server:
-                if not i_user.registered_on_server:
-                    result = self._api_post(i_user)
-                    print("ПУНКТ 1")
-                elif i_user.is_changed():
+
+            if i_user.registered_on_server and i_user.is_changed():
+                result = self._api_put(i_user)
+
+            elif not i_user.registered_on_server and not i_user.is_changed():
+                result = self._api_post(i_user)
+
+            elif not i_user.registered_on_server and i_user.is_changed():
+                result = self._api_post(i_user)
+                if not result:
                     result = self._api_put(i_user)
-                    print("ПУНКТ 2")
-
-            else:
-                if not i_user.registered_on_server:
-                    if not i_user.is_changed():
-                        result = self._api_post(i_user)
-                        print("ПУНКТ 3")
-
-                    elif i_user.is_changed():
-                        result = self._api_post(i_user)
-                        print("ПУНКТ 4")
-
-                        if not result:
-                            result = self._api_put(i_user)
-                            print("ПУНКТ 5")
 
             if result:
                 i_user.update_personal_data_cache()

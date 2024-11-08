@@ -288,7 +288,6 @@ def test_no_connection_and_change_user(shopper_pool, user_id, url_no_valid, shop
     assert user.phoneNumber is None
     assert user.homeAddress is None
 
-    assert user.no_connection_server == True
     assert user.registered_on_server == False
     assert user.is_changed() == False
 
