@@ -74,11 +74,16 @@ class Seller(User):
             Метод возвращает строку, содержащую основные данные продавца: имя, телефон, адрес при применении к объекту
         покупателя метода str
         """
-        text, name = [], None
+        text, name = [], "Клиент"
         if self.nickname:
             name = self.nickname
-        elif self.firstName :
+        elif self.firstName and self.lastName:
             name = ' '.join([self.firstName, self.lastName])
+        elif self.firstName:
+            name = self.firstName
+        elif self.lastName:
+            name = self.lastName
+
         if name:
             text.append('<b>Имя:</b> {}'.format(name))
 
