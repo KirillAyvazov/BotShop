@@ -21,6 +21,7 @@ class CommandPool:
         Данный класс - модель пула команд бота, который позволяет собрать команды из файлов обработчиков, отсортировать
     их в порядке приоритета и подключить к боту.
     """
+
     def __init__(self, bot: BotShop):
         self.__bot: BotShop = bot
         self.__pool: List[Command] = list()
@@ -32,4 +33,9 @@ class CommandPool:
     def connect_commands(self) -> None:
         """Данный метод фильтрует команды из пула команд по их приоритету и присваивает их боту"""
         self.__pool.sort(key=lambda i_command: i_command.priority)
-        self.__bot.set_my_commands([BotCommand(i_command.name, i_command.description) for i_command in self.__pool])
+        self.__bot.set_my_commands(
+            [
+                BotCommand(i_command.name, i_command.description)
+                for i_command in self.__pool
+            ]
+        )

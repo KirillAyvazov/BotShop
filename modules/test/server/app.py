@@ -14,7 +14,9 @@ class FlaskTestServer(Flask):
 
     def __start(self):
         create_routs(self)
-        self.run(debug=False) # ОТЛАДКУ НЕ ВКЛЮЧАТЬ! ПРИЛОЖЕНИЕ УПАДЕТ ИЗ_ЗА ОШИБОК В БИБЛИОТЕКЕ!
+        self.run(
+            debug=False
+        )  # ОТЛАДКУ НЕ ВКЛЮЧАТЬ! ПРИЛОЖЕНИЕ УПАДЕТ ИЗ_ЗА ОШИБОК В БИБЛИОТЕКЕ!
 
     def start_testing_server(self) -> None:
         """Метод для запуска тестового приложения в отдельном потоке"""
@@ -25,8 +27,8 @@ class FlaskTestServer(Flask):
 
 def create_app() -> FlaskTestServer:
     """Функция создает экземпляр фласк приложения"""
-    app = FlaskTestServer(__name__, instance_path="/home/kirill/project/app_path")
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///fff.db"
+    app = FlaskTestServer(__name__)  # instance_path="/home/kirill/project/app_path"
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///"
 
     db.init_app(app)
     with app.app_context():
@@ -34,4 +36,3 @@ def create_app() -> FlaskTestServer:
         db.create_all()
 
     return app
-

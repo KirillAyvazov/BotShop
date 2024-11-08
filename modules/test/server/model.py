@@ -17,6 +17,4 @@ class User(Base):
     phoneNumber = Column(String)
     homeAddress = Column(String)
 
-    __table_args__ = (
-        PrimaryKeyConstraint('tgId'),
-    )
+    __table_args__ = (PrimaryKeyConstraint("tgId"),)

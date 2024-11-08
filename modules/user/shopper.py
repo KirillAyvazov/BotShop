@@ -2,6 +2,7 @@
     Данный модуль содержит реализацию класса Покупатель, сущность, при помощи которой телеграмм бот оперирует с данными
 пользователя являющегося источником заказов на приобретение товаров. Класс покупатель является дочерним для класса User.
 """
+
 from marshmallow import fields, post_load
 from typing import Optional, List
 import time
@@ -21,16 +22,20 @@ class Shopper(User):
         Класс Покупатель - является сущностью предназначенной для хранения, получения и преобразования данных
     пользователей необходимых для осуществления покупок.
     """
-    def __init__(self,
-                 tgId: int,
-                 orders_url: str,
-                 firstName: Optional[str] = None,
-                 lastName: Optional[str] = None,
-                 nickname: Optional[str] = None,
-                 phoneNumber: Optional[str] = None,
-                 homeAddress: Optional[str] = None
-                 ):
-        super().__init__(tgId, orders_url, firstName, lastName, nickname, phoneNumber, homeAddress)
+
+    def __init__(
+        self,
+        tgId: int,
+        orders_url: str,
+        firstName: Optional[str] = None,
+        lastName: Optional[str] = None,
+        nickname: Optional[str] = None,
+        phoneNumber: Optional[str] = None,
+        homeAddress: Optional[str] = None,
+    ):
+        super().__init__(
+            tgId, orders_url, firstName, lastName, nickname, phoneNumber, homeAddress
+        )
         self.__orders: Optional[ShopperOrdersPool] = None
         self._personal_data_cache = self._get_personal_data_cache()
         self.__get_orders()
@@ -44,22 +49,22 @@ class Shopper(User):
         if self.nickname:
             name = self.nickname
         elif self.firstName and self.lastName:
-            name = ' '.join([self.firstName, self.lastName])
+            name = " ".join([self.firstName, self.lastName])
         elif self.firstName:
             name = self.firstName
         elif self.lastName:
             name = self.lastName
 
         if name:
-            text.append('<b>Имя:</b> {}'.format(name))
+            text.append("<b>Имя:</b> {}".format(name))
 
         if self.phoneNumber:
-            text.append('<b>Номер телефона:</b> {}'.format(self.phoneNumber))
+            text.append("<b>Номер телефона:</b> {}".format(self.phoneNumber))
 
         if self.homeAddress:
-            text.append('<b>Домашний адрес:</b> {}'.format(self.homeAddress))
+            text.append("<b>Домашний адрес:</b> {}".format(self.homeAddress))
 
-        return '\n'.join(text)
+        return "\n".join(text)
 
     @execute_in_new_thread(daemon=True)
     def __get_orders(self) -> None:
@@ -93,6 +98,7 @@ class Shopper(User):
 
 class ShopperSchema(UserSchema):
     """Класс - схема данных предназначенная для валидации данных покупателя получаемых от внешнего API"""
+
     @post_load
     def create_shopper(self, data, **kwargs) -> Shopper:
         shopper = Shopper(**data)
@@ -106,7 +112,10 @@ class ShopperPool(UserPool):
     осуществляться любое взаимодействие с объектами покупателей. Так же объект этого класса осуществляет взаимодействие
     с внешним API, удаленно хранящим данные покупателей
     """
-    def __init__(self, shopper_url: str, orders_url: str, session_time: Optional[int] = None):
+
+    def __init__(
+        self, shopper_url: str, orders_url: str, session_time: Optional[int] = None
+    ):
         super().__init__(shopper_url, orders_url, ShopperSchema, Shopper, session_time)
 
     def _save_user_data(self, list_shoppers: List[Shopper]) -> None:
@@ -128,18 +137,20 @@ class ShopperPool(UserPool):
 
     def get_personal_data(self, tg_id: int) -> str:
         """
-            Метод возвращает персональную информацию о покупателе в виде строки
+        Метод возвращает персональную информацию о покупателе в виде строки
         """
-        data =  super()._api_get(tg_id, get_user_object=False)
+        data = super()._api_get(tg_id, get_user_object=False)
 
         name = data.get("nickname", None)
         if name is None:
-            name = " ".join([str(data.get("firstName", None)), str(data.get("lastName", None))])
+            name = " ".join(
+                [str(data.get("firstName", None)), str(data.get("lastName", None))]
+            )
 
         text = [
             f"<b>Имя:</b> {name}",
             f"<b>Номер телефона:</b> {str(data.get('phoneNumber', None))}",
-            f"<b>Адрес доставки:</b> {str(data.get('homeAddress', None))}"
+            f"<b>Адрес доставки:</b> {str(data.get('homeAddress', None))}",
         ]
 
         return "\n".join(text)

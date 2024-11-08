@@ -6,7 +6,15 @@
 данные необходимы для реализации исчезающих сообщений и завершения сессии пользователя.
 """
 
-from sqlalchemy import Column, Integer, String, PrimaryKeyConstraint, DateTime, create_engine, ForeignKeyConstraint
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    PrimaryKeyConstraint,
+    DateTime,
+    create_engine,
+    ForeignKeyConstraint,
+)
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from datetime import datetime, timedelta
 import pytz
@@ -32,14 +40,16 @@ moscow_tz = pytz.timezone("Europe/Moscow")
 
 Base = declarative_base()
 
-if not os.path.exists('database'):
-    os.makedirs('database')
-engine = create_engine('sqlite:///{}'.format(os.path.join('database', 'user_database.db')))
+if not os.path.exists("database"):
+    os.makedirs("database")
+engine = create_engine(
+    "sqlite:///{}".format(os.path.join("database", "user_database.db"))
+)
 
 Session = sessionmaker(bind=engine)
 session = Session()
 
-ObjectName = Literal['bot', 'user']
+ObjectName = Literal["bot", "user"]
 
 
 class UserTable(Base):
@@ -47,31 +57,32 @@ class UserTable(Base):
         Класс - представление таблицы базы данных в которой хранятся данные необходимые для корректной работы класса
     Пользователя
     """
-    __tablename__ = 'user'
+
+    __tablename__ = "user"
 
     tgId = Column(Integer)
-    message_id_bot_to_user = Column(String, nullable=False, default='')
-    message_id_user_to_bot = Column(String, nullable=False, default='')
+    message_id_bot_to_user = Column(String, nullable=False, default="")
+    message_id_user_to_bot = Column(String, nullable=False, default="")
     last_session = Column(DateTime, default=datetime.now(moscow_tz))
     notifications = relationship("NotificationTable")
 
-    __table_args__ = (
-        PrimaryKeyConstraint('tgId'),
-    )
+    __table_args__ = (PrimaryKeyConstraint("tgId"),)
 
 
 class NotificationTable(Base):
     """Класс - модель таблицы для хранения id уведомлений пользователей"""
-    __tablename__ = 'notification'
+
+    __tablename__ = "notification"
 
     id = Column(Integer)
     user_id = Column(Integer)
     notification_id = Column(Integer)
 
     __table_args__ = (
-        PrimaryKeyConstraint('id'),
-        ForeignKeyConstraint(["user_id"], ["user.tgId"])
+        PrimaryKeyConstraint("id"),
+        ForeignKeyConstraint(["user_id"], ["user.tgId"]),
     )
+
 
 Base.metadata.create_all(engine)
 
@@ -82,14 +93,16 @@ class User:
     предназначенный для хранения данных пользователя и управления ими.
     """
 
-    def __init__(self, tg_id: int,
-                 orders_url: str,
-                 firstName: Optional[str] = None,
-                 lastName: Optional[str] = None,
-                 nickname: Optional[str] = None,
-                 phoneNumber: Optional[str] = None,
-                 homeAddress: Optional[str] = None,
-                 ):
+    def __init__(
+        self,
+        tg_id: int,
+        orders_url: str,
+        firstName: Optional[str] = None,
+        lastName: Optional[str] = None,
+        nickname: Optional[str] = None,
+        phoneNumber: Optional[str] = None,
+        homeAddress: Optional[str] = None,
+    ):
         self.tgId: int = tg_id
         self.orders_url: str = orders_url
         self.firstName: Optional[str] = firstName
@@ -124,13 +137,19 @@ class User:
         user_table = session.get(UserTable, self.tgId)
 
         if user_table:
-            for i_elem in [i_elem for i_elem in user_table.message_id_user_to_bot.split(',')]:
+            for i_elem in [
+                i_elem for i_elem in user_table.message_id_user_to_bot.split(",")
+            ]:
                 self.__message_id_user_to_bot.put(i_elem)
 
-            for i_elem in [i_elem for i_elem in user_table.message_id_bot_to_user.split(',')]:
+            for i_elem in [
+                i_elem for i_elem in user_table.message_id_bot_to_user.split(",")
+            ]:
                 self.__message_id_bot_to_user.put(i_elem)
 
-            self.last_session = datetime.strptime(str(user_table.last_session), "%Y-%m-%d %H:%M:%S.%f")
+            self.last_session = datetime.strptime(
+                str(user_table.last_session), "%Y-%m-%d %H:%M:%S.%f"
+            )
 
         else:
             user_table = UserTable(tgId=self.tgId)
@@ -140,8 +159,12 @@ class User:
                 self.__restore_data_in_local_db()
             except Exception as ex:
                 session.rollback()
-                dev_log.exception('Не удалось добавить запись о пользователе {} в локальную базу данных'.format(self.tgId),
-                                exc_info=ex)
+                dev_log.exception(
+                    "Не удалось добавить запись о пользователе {} в локальную базу данных".format(
+                        self.tgId
+                    ),
+                    exc_info=ex,
+                )
 
     def __object_control(self, object_name: ObjectName) -> Queue[int]:
         """
@@ -151,9 +174,9 @@ class User:
         user - возвращается список id сообщений отправленных пользователем.
             Это вспомогательный метод. Он используется в методах append_message и pop_message
         """
-        if object_name == 'bot':
+        if object_name == "bot":
             return self.__message_id_bot_to_user
-        elif object_name == 'user':
+        elif object_name == "user":
             return self.__message_id_user_to_bot
         raise ValueError('Метод должен принимать на вход строку "bot" "user"')
 
@@ -197,15 +220,23 @@ class User:
 
     def saving_to_local_db(self) -> None:
         """Метод сохраняет (обновляет) необходимые для корректной работы данные пользователя в локальную базу данных"""
-        session.query(UserTable).filter(UserTable.tgId==self.tgId).update(
+        session.query(UserTable).filter(UserTable.tgId == self.tgId).update(
             {
-                "message_id_bot_to_user": ','.join([str(self.__message_id_bot_to_user.get())
-                                                    for _ in range(self.__message_id_bot_to_user.qsize())]),
-                "message_id_user_to_bot": ','.join([str(self.__message_id_user_to_bot.get())
-                                                    for _ in range(self.__message_id_user_to_bot.qsize())]),
-                "last_session":  self.last_session
+                "message_id_bot_to_user": ",".join(
+                    [
+                        str(self.__message_id_bot_to_user.get())
+                        for _ in range(self.__message_id_bot_to_user.qsize())
+                    ]
+                ),
+                "message_id_user_to_bot": ",".join(
+                    [
+                        str(self.__message_id_user_to_bot.get())
+                        for _ in range(self.__message_id_user_to_bot.qsize())
+                    ]
+                ),
+                "last_session": self.last_session,
             },
-            synchronize_session='fetch'
+            synchronize_session="fetch",
         )
 
         try:
@@ -213,8 +244,12 @@ class User:
 
         except Exception as ex:
             session.rollback()
-            dev_log.exception('Не удалось сохранить данные пользователя {} в локальную базу данных'.format(self.tgId),
-                              exc_info=ex)
+            dev_log.exception(
+                "Не удалось сохранить данные пользователя {} в локальную базу данных".format(
+                    self.tgId
+                ),
+                exc_info=ex,
+            )
 
     def register_step(self, step: Callable) -> None:
         """
@@ -239,7 +274,9 @@ class User:
         сообщения будут удалены из базы данных
         """
         user: UserTable = session.query(UserTable).get(self.tgId)
-        list_notifications_id = [i_notification.notification_id for i_notification in user.notifications]
+        list_notifications_id = [
+            i_notification.notification_id for i_notification in user.notifications
+        ]
 
         if delete:
             try:
@@ -247,8 +284,11 @@ class User:
                     session.delete(i_notification)
                     session.commit()
             except Exception as ex:
-                dev_log.exception(f"Не удалось удалить из базы данных"
-                                  f"уведомления пользователя {self.tgId}", exc_info=ex)
+                dev_log.exception(
+                    f"Не удалось удалить из базы данных"
+                    f"уведомления пользователя {self.tgId}",
+                    exc_info=ex,
+                )
                 session.rollback()
 
         return list_notifications_id
@@ -259,10 +299,18 @@ class User:
         Это вспомогательный метод. Он необходим для определения - были ли изменены персональные данные покупателя.
         Применяется в функции is_changed
         """
-        list_personal_data = [self.firstName, self.lastName, self.nickname, self.phoneNumber, self.homeAddress]
-        list_personal_data = list(filter(lambda i_elem: not i_elem is None, list_personal_data))
+        list_personal_data = [
+            self.firstName,
+            self.lastName,
+            self.nickname,
+            self.phoneNumber,
+            self.homeAddress,
+        ]
+        list_personal_data = list(
+            filter(lambda i_elem: not i_elem is None, list_personal_data)
+        )
         list_personal_data = list(map(str, list_personal_data))
-        return hash(''.join(list_personal_data))
+        return hash("".join(list_personal_data))
 
     def is_changed(self) -> bool:
         """Метод проверяет, были ли изменены персональны данные пользователя после их получения от внешнего API"""
@@ -279,6 +327,7 @@ class User:
 
 class UserSchema(Schema):
     """Класс - схема данных предназначенная для валидации данных пользователя получаемых от внешнего API"""
+
     tgId = fields.Int(required=True, allow_none=False)
     firstName = fields.Str(allow_none=True)
     lastName = fields.Str(allow_none=True)
@@ -296,14 +345,21 @@ class UserPool(ABC):
     осуществляться любое взаимодействие с объектами пользователей. Так же объект этого класса осуществляет взаимодействие
     с внешним API, удаленно хранящим данные пользователей
     """
-    def __init__(self, user_url: str, orders_url: str, user_schema, user_class,
-                 session_time: Optional[int] = None):
+
+    def __init__(
+        self,
+        user_url: str,
+        orders_url: str,
+        user_schema,
+        user_class,
+        session_time: Optional[int] = None,
+    ):
         self._user_url: str = user_url
         self._orders_url: str = orders_url
         self._user_schema = user_schema()
         self.__user_class = user_class
-        self._content_type: Dict[str, str] = {'Content-Type': 'application/json'}
-        self._pool: Dict[int: User] = dict()
+        self._content_type: Dict[str, str] = {"Content-Type": "application/json"}
+        self._pool: Dict[int:User] = dict()
         self._session_time: Optional[int] = session_time
         self._bot = None
 
@@ -327,13 +383,17 @@ class UserPool(ABC):
 
         return user
 
-    def _api_get(self, tg_id: int, get_user_object: bool = True) -> Union[Optional[User], Optional[Dict[str, Any]]]:
+    def _api_get(
+        self, tg_id: int, get_user_object: bool = True
+    ) -> Union[Optional[User], Optional[Dict[str, Any]]]:
         """
             Метод реализует получение данных пользователя от внешнего API. Если аргумент get_user_object = True,
         метод вернет объект пользователя, если False - словарь с данными пользователя
         """
         try:
-            response = requests.get('/'.join([self._user_url, str(tg_id)]), headers=self._content_type)
+            response = requests.get(
+                "/".join([self._user_url, str(tg_id)]), headers=self._content_type
+            )
             if response.status_code == 200:
                 data = json.loads(response.text)
 
@@ -341,39 +401,59 @@ class UserPool(ABC):
                     return data
 
                 data["orders_url"] = self._orders_url
-                user = self._user_schema.loads(json.dumps(data), unknown='exclude')
+                user = self._user_schema.loads(json.dumps(data), unknown="exclude")
                 user.registered_on_server = True
                 return user
 
-            dev_log.info(f'Не удалось получить от сервера данные пользователя {tg_id}. Статус код {response.status_code}')
+            dev_log.info(
+                f"Не удалось получить от сервера данные пользователя {tg_id}. Статус код {response.status_code}"
+            )
 
         except Exception as ex:
-            dev_log.exception('При попытке получить от сервера данные пользователя {} произошла ошибка:'.format(tg_id),
-                              exc_info=ex)
+            dev_log.exception(
+                "При попытке получить от сервера данные пользователя {} произошла ошибка:".format(
+                    tg_id
+                ),
+                exc_info=ex,
+            )
 
     def _api_put(self, user: User) -> Optional[bool]:
         """Метод осуществляет сохранение измененных данных пользователя на внешнем сервере"""
         try:
             data = self._user_schema.dumps(user)
-            response = requests.put(self._user_url, data=data, headers=self._content_type)
+            response = requests.put(
+                self._user_url, data=data, headers=self._content_type
+            )
             if response.status_code == 200:
-                dev_log.debug(f'Данные пользователя {user.tgId} успешно обновлены на сервере')
+                dev_log.debug(
+                    f"Данные пользователя {user.tgId} успешно обновлены на сервере"
+                )
                 return True
 
         except Exception as ex:
-            dev_log.exception(f'Не удалось обновить данные пользователя {user.tgId} из-за ошибки:', exc_info=ex)
+            dev_log.exception(
+                f"Не удалось обновить данные пользователя {user.tgId} из-за ошибки:",
+                exc_info=ex,
+            )
 
     def _api_post(self, user: User) -> Optional[bool]:
         """Метод осуществляет добавление нового пользователя на внешний сервер"""
         try:
             data = self._user_schema.dumps(user)
-            response = requests.post(self._user_url, data=data, headers=self._content_type)
+            response = requests.post(
+                self._user_url, data=data, headers=self._content_type
+            )
             if response.status_code == 200:
-                dev_log.debug(f'Данные нового пользователя {user.tgId} успешно добавлены на сервер')
+                dev_log.debug(
+                    f"Данные нового пользователя {user.tgId} успешно добавлены на сервер"
+                )
                 return True
 
         except Exception as ex:
-            dev_log.exception(f'Не удалось добавить данные нового пользователя {user.tgId} из-за ошибки:', exc_info=ex)
+            dev_log.exception(
+                f"Не удалось добавить данные нового пользователя {user.tgId} из-за ошибки:",
+                exc_info=ex,
+            )
 
     def add_bot(self, bot) -> None:
         """
@@ -420,7 +500,9 @@ class UserPool(ABC):
             Данный метод предназначен для получения данных зарегистрированного пользователя с сервера в случаях, когда
         пользователь из-за перебоев с сетью был помечен ботом как незарегистрированный пользователь
         """
-        old_user_data: Dict[str, Any] = self._api_get(tg_id=user.tgId, get_user_object=False)
+        old_user_data: Dict[str, Any] = self._api_get(
+            tg_id=user.tgId, get_user_object=False
+        )
         if old_user_data:
             for i_attr_name, i_val in old_user_data.items():
                 if not getattr(user, i_attr_name, None):
@@ -428,7 +510,12 @@ class UserPool(ABC):
             return True
 
     @execute_in_new_thread(daemon=True)
-    def data_control(self, *, test_step: Optional[int] = None, test_session_time: Optional[int] = None) -> None:
+    def data_control(
+        self,
+        *,
+        test_step: Optional[int] = None,
+        test_session_time: Optional[int] = None,
+    ) -> None:
         """
             Этот метод - бесконечный цикл выполняемый в отдельном потоке - служит для контроля востребованности данных
         пользователей. Если в пуле пользователей есть объекты, взаимодействие с которыми не осуществлялось установленное
@@ -443,26 +530,39 @@ class UserPool(ABC):
         while self._session_time:
             time.sleep(self._session_time // 2)
 
-            list_user_to_delete = list(filter(lambda i_user: datetime.now(moscow_tz) - i_user.last_session > time_delta,
-                                                 self._pool.values()))
+            list_user_to_delete = list(
+                filter(
+                    lambda i_user: datetime.now(moscow_tz) - i_user.last_session
+                    > time_delta,
+                    self._pool.values(),
+                )
+            )
 
             try:
                 self._save_user_data(list_user_to_delete)
                 self._delete_user_notifications(list_user_to_delete)
 
             except Exception as ex:
-                dev_log.exception("При обработке данных пользователей произошла ошибка:", exc_info=ex)
+                dev_log.exception(
+                    "При обработке данных пользователей произошла ошибка:", exc_info=ex
+                )
 
-            new_pool = {i_id: i_user for i_id, i_user in self._pool.items()
-                        if i_user not in list_user_to_delete or i_user.is_changed()}
+            new_pool = {
+                i_id: i_user
+                for i_id, i_user in self._pool.items()
+                if i_user not in list_user_to_delete or i_user.is_changed()
+            }
 
             with Semaphore():
                 initial_pool_size = sys.getsizeof(self._pool)
                 self._pool = new_pool
                 final_size_pool = sys.getsizeof(self._pool)
 
-            dev_log.debug('Размер пула покупателей до/после очищения: {}/{}'.format(initial_pool_size,
-                                                                                    final_size_pool))
+            dev_log.debug(
+                "Размер пула покупателей до/после очищения: {}/{}".format(
+                    initial_pool_size, final_size_pool
+                )
+            )
             new_pool = None
 
             # Код для выполнения пошаговых тестов
@@ -472,7 +572,6 @@ class UserPool(ABC):
                 test_step -= 1
 
         dev_log.warning("Метод data_control завершил свое выполнение!")
-
 
     def is_active(self, tg_id) -> bool:
         """
@@ -492,14 +591,19 @@ class UserPool(ABC):
     @classmethod
     def add_notification_id(cls, user_id, notification_id) -> None:
         """Метод предназначен для сохранения в локальной базе данных id отправленного пользователю уведомления"""
-        new_notification = NotificationTable(user_id=user_id, notification_id=notification_id)
+        new_notification = NotificationTable(
+            user_id=user_id, notification_id=notification_id
+        )
         try:
             session.add(new_notification)
             session.commit()
 
         except Exception as ex:
-            dev_log.exception(f"Не удалось добавить в базу данных id {notification_id} "
-                              f"уведомления пользователя {user_id}", exc_info=ex)
+            dev_log.exception(
+                f"Не удалось добавить в базу данных id {notification_id} "
+                f"уведомления пользователя {user_id}",
+                exc_info=ex,
+            )
             session.rollback()
 
     def get_pool_size(self):

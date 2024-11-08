@@ -2,6 +2,7 @@
     Данные модуль содержит описание основных сущностей, при помощи которых реализовано хранение и взаимодействие с
 продаваемыми в магазине товарами.
 """
+
 import os.path
 from typing import List, Dict, Optional, Any
 from telebot.types import InputMediaPhoto
@@ -22,8 +23,18 @@ data_tunnel = DataTunnel()
 
 class Product:
     """Класс - модель единицы продаваемой продукции"""
-    def __init__(self, productId: str, name: str, price: int, description: str, image: List[str], delivery: bool,
-                 category: str, count: int = 1):
+
+    def __init__(
+        self,
+        productId: str,
+        name: str,
+        price: int,
+        description: str,
+        image: List[str],
+        delivery: bool,
+        category: str,
+        count: int = 1,
+    ):
         self.productsId: str = productId
         self.name: str = name
         self.price: int = price
@@ -47,11 +58,19 @@ class Product:
             response = requests.get(url)
             if response.status_code == 200:
                 return response.content
-            dev_log.exception('По url {} не удалось получить изображение товара от сервера - код {}'.format(url,
-                               response.status_code))
+            dev_log.exception(
+                "По url {} не удалось получить изображение товара от сервера - код {}".format(
+                    url, response.status_code
+                )
+            )
 
         except Exception as ex:
-            dev_log.exception('По url {} не удалось получить изображение товара от сервера'.format(url), exc_info=ex)
+            dev_log.exception(
+                "По url {} не удалось получить изображение товара от сервера".format(
+                    url
+                ),
+                exc_info=ex,
+            )
 
     def __get_list_images(self, list_url: List[str]) -> List[bytes]:
         """
@@ -70,21 +89,27 @@ class Product:
         InputMediaPhoto - объекты, которые объект телеграм бота способен отправить пользователю в виде группового
         сообщения
         """
-        list_input_media_photo = [InputMediaPhoto(i_elem)
-                                  for i_elem in self.__get_list_images(list_url[:10])
-                                  if isinstance(i_elem, bytes)]
+        list_input_media_photo = [
+            InputMediaPhoto(i_elem)
+            for i_elem in self.__get_list_images(list_url[:10])
+            if isinstance(i_elem, bytes)
+        ]
 
         if len(list_input_media_photo) == 0:
-            path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static', 'placeholder.png')
-            with open(path, 'rb') as file:
+            path = os.path.join(
+                os.path.abspath(os.path.dirname(__file__)), "static", "placeholder.png"
+            )
+            with open(path, "rb") as file:
                 list_input_media_photo.append(InputMediaPhoto(file.read()))
 
         return list_input_media_photo
 
     def __repr__(self) -> str:
         """Метод возвращает строку с информацией о товаре при обращении к объекту продукта как к типу str"""
-        return (f"<b>Категория:</b> {self.category}\n<b>Название:</b> {self.name}\n<b>Цена:</b> "
-                f"{self.price}\n<b>Описание:</b> {self.description}")
+        return (
+            f"<b>Категория:</b> {self.category}\n<b>Название:</b> {self.name}\n<b>Цена:</b> "
+            f"{self.price}\n<b>Описание:</b> {self.description}"
+        )
 
 
 class ProductSchema(Schema):
@@ -92,6 +117,7 @@ class ProductSchema(Schema):
         Класс - модель данных json получаемого от внешнего API при запросе продукта. Служит для валидации, сериализации
     и десериализации данных.
     """
+
     productId = fields.Str(required=True, allow_none=False)
     name = fields.Str(required=True, allow_none=False)
     description = fields.Str(required=True, allow_none=False)
@@ -110,29 +136,38 @@ class Category:
         Класс - объекты которого объединяют в себе продукты относящиеся к определенному типу. Объект класса category
     является посредником при работе с объектами класса Product и обеспечивает их хранение и управление ими
     """
-    def __init__(self, categoryId: int, name: str, variability: bool, url_category: str):
+
+    def __init__(
+        self, categoryId: int, name: str, variability: bool, url_category: str
+    ):
         self.__url_category: str = url_category
         self.__product_schema: ProductSchema = ProductSchema()
-        self.__content_type: Dict[str, str] = {'Content-Type': 'application/json'}
+        self.__content_type: Dict[str, str] = {"Content-Type": "application/json"}
         self.categoryId: int = categoryId
         self.name: str = name
         self.variability: bool = variability
         self.products: List[Product] = self.__api_get_list_product(categoryId)
 
-
     def __api_get_list_product(self, category_id: int) -> List[Product]:
         """Метод служит для получения данных о продуктах указанной категории от внешнего API"""
         try:
-            response = requests.get('/'.join([self.__url_category, str(category_id)]), headers=self.__content_type)
+            response = requests.get(
+                "/".join([self.__url_category, str(category_id)]),
+                headers=self.__content_type,
+            )
 
             if response.status_code == 200:
                 return self.__product_schema.loads(response.text, many=True)
 
-            dev_log.info(f"Не удалось получить данные о продуктах категории {self.categoryId}")
+            dev_log.info(
+                f"Не удалось получить данные о продуктах категории {self.categoryId}"
+            )
 
         except Exception as ex:
-            dev_log.exception(f"При попытке получить данные о продуктах категории {self.categoryId} возникла ошибка",
-                              exc_info=ex)
+            dev_log.exception(
+                f"При попытке получить данные о продуктах категории {self.categoryId} возникла ошибка",
+                exc_info=ex,
+            )
 
         return []
 
@@ -146,11 +181,11 @@ class CategorySchema(Schema):
         Класс - модель данных json получаемого от внешнего API при запросе списка категорий. Служит для валидации,
     сериализации и десериализации данных.
     """
+
     categoryId = fields.Int(required=True, allow_none=False)
     name = fields.Str(required=True, allow_none=False)
     variability = fields.Boolean(required=True, allow_none=False)
     url_category = fields.Str(required=False, allow_none=False, load_only=True)
-
 
     @post_load
     def create_category(self, data, **kwargs) -> Category:
@@ -165,10 +200,13 @@ class CategoryPool:
     продаваемых товаров. При помощи объекта класса CategoryPool осуществляется периодическое обновление каталога
     продаваемых товаров.
     """
-    def __init__(self, url_category: str, url_product: str, update_period: Optional[int] = None):
+
+    def __init__(
+        self, url_category: str, url_product: str, update_period: Optional[int] = None
+    ):
         self.__url_category = url_category
         self.__url_product = url_product
-        self.__content_type: Dict[str, str] = {'Content-Type': 'application/json'}
+        self.__content_type: Dict[str, str] = {"Content-Type": "application/json"}
         self.__category_schema: CategorySchema = CategorySchema()
         self.__product_schema: ProductSchema = ProductSchema()
         self.__update_period: Optional[int] = update_period
@@ -184,15 +222,22 @@ class CategoryPool:
         id товара
         """
         try:
-            response = requests.get('/'.join([self.__url_product, products_id]), headers=self.__content_type)
+            response = requests.get(
+                "/".join([self.__url_product, products_id]), headers=self.__content_type
+            )
             if response.status_code == 200:
                 return self.__product_schema.loads(response.text)
 
-            dev_log.debug(f'Не удалось получить данные о товаре {products_id} при загрузке заказа: статус код '
-                          f'{response.status_code}')
+            dev_log.debug(
+                f"Не удалось получить данные о товаре {products_id} при загрузке заказа: статус код "
+                f"{response.status_code}"
+            )
 
         except Exception as ex:
-            dev_log.exception(f'При попытке получить данные товара {products_id} произошла ошибка:', exc_info=ex)
+            dev_log.exception(
+                f"При попытке получить данные товара {products_id} произошла ошибка:",
+                exc_info=ex,
+            )
 
     def __api_get_list_category(self) -> List[Category]:
         """Метод служит для получения от внешнего API списка категорий продаваемых товаров"""
@@ -204,12 +249,16 @@ class CategoryPool:
                 for i_dict in category_data:
                     i_dict.update({"url_category": self.__url_category})
 
-                return self.__category_schema.loads(json.dumps(category_data), many=True)
+                return self.__category_schema.loads(
+                    json.dumps(category_data), many=True
+                )
 
             dev_log.info(f"Не удалось получить список категорий")
 
         except Exception as ex:
-            dev_log.exception(f"При попытке получить список категорий возникла ошибка", exc_info=ex)
+            dev_log.exception(
+                f"При попытке получить список категорий возникла ошибка", exc_info=ex
+            )
 
         return []
 
@@ -219,14 +268,19 @@ class CategoryPool:
         if len(new_list_category) > 0:
             with Semaphore():
                 self.categories = new_list_category
-                self.__product_dict = {i_product.productsId: i_product for i_category in self.categories
-                                       for i_product in i_category.products}
+                self.__product_dict = {
+                    i_product.productsId: i_product
+                    for i_category in self.categories
+                    for i_product in i_category.products
+                }
 
     def get_product(self, product_id: str) -> Optional[Product]:
         """Метод возвращает объект продукт из пула по указанному id"""
         product = self.__product_dict.get(product_id, None)
         if product is None:
-            dev_log.info(f"Товар с id {product_id} не был найден в пуле, выполняется запрос к API")
+            dev_log.info(
+                f"Товар с id {product_id} не был найден в пуле, выполняется запрос к API"
+            )
             product = self.__api_get_product(product_id)
         return product
 

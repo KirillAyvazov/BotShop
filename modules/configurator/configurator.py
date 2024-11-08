@@ -22,12 +22,13 @@ dotenv.load_dotenv()
 @dataclass
 class SubConfigurator:
     """Вспомогательный класс, используемый для хранения параметров настроек в классе-конфигураторе"""
+
     pass
 
 
 class Configurator:
     """
-        Класс реализующий контроль наличия параметров проекта, их загрузку и их передачу целевым исполнителям
+    Класс реализующий контроль наличия параметров проекта, их загрузку и их передачу целевым исполнителям
     """
 
     def __init__(self):
@@ -37,9 +38,11 @@ class Configurator:
     @classmethod
     def __config_control(cls) -> None:
         """Метод осуществляет контроль наличия в проекте файла config на первом уровне вложенности"""
-        if not os.path.exists('config.yaml'):
-            raise FileNotFoundError('В проекте отсутствует файл config.yaml или он имеет более глубокий уровень '
-                                    'вложенности')
+        if not os.path.exists("config.yaml"):
+            raise FileNotFoundError(
+                "В проекте отсутствует файл config.yaml или он имеет более глубокий уровень "
+                "вложенности"
+            )
 
     @classmethod
     def path_control(cls, path: str, create: bool = False) -> None:
@@ -58,19 +61,20 @@ class Configurator:
             Метод предназначен для чтения данных из файла config.yaml. Так же данный метод вызывает метод присвоения
         прочтенных из файла-конфигурации параметров
         """
-        with open("config.yaml", 'r') as config_file:
+        with open("config.yaml", "r") as config_file:
             data: Dict[str, Any] = yaml.safe_load(config_file)
         self.__save_config(self, data)
 
     @classmethod
-    def __save_config(cls, obj: Union['Configurator', SubConfigurator], data: Dict[str, Any]) -> Union['Configurator',
-                      SubConfigurator]:
+    def __save_config(
+        cls, obj: Union["Configurator", SubConfigurator], data: Dict[str, Any]
+    ) -> Union["Configurator", SubConfigurator]:
         """
             Метод осуществляет присвоение объекту конфигуратора атрибутов, прочтенных из файла config.yaml. Это
         реализовано с применением рекурсии.
         """
         for i_key, i_val in data.items():
-            if i_key == 'env':
+            if i_key == "env":
                 for i_env_key, i_env_val in i_val.items():
                     setattr(obj, i_env_key, os.getenv(i_env_val))
 

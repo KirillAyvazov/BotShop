@@ -4,8 +4,10 @@ from typing import Optional
 
 fake = Faker("ru_RU")
 
+
 class UserFaker:
     """Класс - модель пользователя со случайными данными"""
+
     all_object = dict()
 
     def __init__(self, tgId: int):
@@ -19,5 +21,5 @@ class UserFaker:
         self.all_object[tgId] = self
 
     @classmethod
-    def get_fake_user(cls, tgId: int) -> Optional['UserFaker']:
+    def get_fake_user(cls, tgId: int) -> Optional["UserFaker"]:
         return cls.all_object.get(tgId, None)

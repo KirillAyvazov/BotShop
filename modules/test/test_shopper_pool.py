@@ -7,22 +7,22 @@ from modules.test.server.model import User
 
 def test_normal_conditions(shopper_pool, data_base, user_id):
     """
-        Тест работы пула покупателей в нормальных условиях
-            - проверяем, что размер пула равен нулю;
-            - получаем из пула незарегистрированного пользователя;
-            - проверяем что полученный объект класса Shopper и что его поля is None;
-            - проверяем что значения атрибутов объекта user registered_on_server (зарегистрирован на сервере) = False и
-                is_changed(изменен) = False
-            - присваиваем полям пользователя случайные значения
-            - проверяем что значения атрибутов объекта user registered_on_server (зарегистрирован на сервере) = False и
-                is_changed(изменен) = True
-            - проверяем что размер пула равен единице;
-            - делаем один шаг метода контроля данных;
-            - проверяем, что размер пула равен нулю;
-            - проверяем что значения атрибутов объекта user registered_on_server (зарегистрирован на сервере) = True и
-                is_changed(изменен) = False
-            - проверяем, что данные пользователя корректно записались в базу данных веб приложения;
-            - получаем данные пользователя из пула и сравниваем их с теми что были отправлены на сервер
+    Тест работы пула покупателей в нормальных условиях
+        - проверяем, что размер пула равен нулю;
+        - получаем из пула незарегистрированного пользователя;
+        - проверяем что полученный объект класса Shopper и что его поля is None;
+        - проверяем что значения атрибутов объекта user registered_on_server (зарегистрирован на сервере) = False и
+            is_changed(изменен) = False
+        - присваиваем полям пользователя случайные значения
+        - проверяем что значения атрибутов объекта user registered_on_server (зарегистрирован на сервере) = False и
+            is_changed(изменен) = True
+        - проверяем что размер пула равен единице;
+        - делаем один шаг метода контроля данных;
+        - проверяем, что размер пула равен нулю;
+        - проверяем что значения атрибутов объекта user registered_on_server (зарегистрирован на сервере) = True и
+            is_changed(изменен) = False
+        - проверяем, что данные пользователя корректно записались в базу данных веб приложения;
+        - получаем данные пользователя из пула и сравниваем их с теми что были отправлены на сервер
     """
     user_fake = UserFaker(user_id)
 
@@ -81,19 +81,19 @@ def test_normal_conditions(shopper_pool, data_base, user_id):
 
 def test_changing_user_data(shopper_pool, data_base, user_id):
     """
-        Тест проверят сохранение небольших изменений данных пользователя.
-            - получаем данные пользователя, который был зарегистрирован в тесте test_normal_conditions;
-            - проверяем что значения атрибутов объекта user registered_on_server (зарегистрирован на сервере) = True и
-                is_changed(изменен) = False;
-            - изменяем у объекта user поле firstName
-            - проверяем что значения атрибутов объекта user registered_on_server (зарегистрирован на сервере) = True и
-                is_changed(изменен) = True;
-            - проверяем что размер пула равен единице;
-            - делаем один шаг метода контроля данных;
-            - проверяем, что размер пула равен нулю;
-            - сравниваем все поля пользователя попавшие в базу данных с предыдущими значениями и с учетом изменений
-            - проверяем что значения атрибутов объекта user registered_on_server (зарегистрирован на сервере) = True и
-                is_changed(изменен) = False;
+    Тест проверят сохранение небольших изменений данных пользователя.
+        - получаем данные пользователя, который был зарегистрирован в тесте test_normal_conditions;
+        - проверяем что значения атрибутов объекта user registered_on_server (зарегистрирован на сервере) = True и
+            is_changed(изменен) = False;
+        - изменяем у объекта user поле firstName
+        - проверяем что значения атрибутов объекта user registered_on_server (зарегистрирован на сервере) = True и
+            is_changed(изменен) = True;
+        - проверяем что размер пула равен единице;
+        - делаем один шаг метода контроля данных;
+        - проверяем, что размер пула равен нулю;
+        - сравниваем все поля пользователя попавшие в базу данных с предыдущими значениями и с учетом изменений
+        - проверяем что значения атрибутов объекта user registered_on_server (зарегистрирован на сервере) = True и
+            is_changed(изменен) = False;
     """
     user_fake = UserFaker.get_fake_user(user_id)
     user_fake.firstName = "ТЕСТОВОЕ_ИМЯ"
@@ -183,7 +183,9 @@ def test_no_connection(shopper_pool, user_id, url_no_valid, data_base):
     assert user.is_changed() == False
 
 
-def test_recovery_connection(shopper_pool, user_id, url_no_valid, shopper_url, data_base):
+def test_recovery_connection(
+    shopper_pool, user_id, url_no_valid, shopper_url, data_base
+):
     """
         Тест работы пула покупателей в условиях неудавшегося запроса к API на этапе получения данных пользователя и
     восстановления связи с сервером при завершении сессии пользователя.
@@ -244,7 +246,9 @@ def test_recovery_connection(shopper_pool, user_id, url_no_valid, shopper_url, d
     assert user.is_changed() == False
 
 
-def test_no_connection_and_change_user_part_1(shopper_pool, user_id, url_no_valid, shopper_url, data_base):
+def test_no_connection_and_change_user_part_1(
+    shopper_pool, user_id, url_no_valid, shopper_url, data_base
+):
     """
         Тест работы пула покупателей в условиях неудавшегося запроса к API на этапе получения данных пользователя.
     Предполагаем что объект пользователя после получения данных был изменен. После неудачной попытки отправить данные
@@ -325,7 +329,9 @@ def test_no_connection_and_change_user_part_1(shopper_pool, user_id, url_no_vali
     assert user_fake.homeAddress == user_from_db.homeAddress
 
 
-def test_no_connection_and_change_user_part_2(shopper_pool, user_id, url_no_valid, shopper_url, data_base):
+def test_no_connection_and_change_user_part_2(
+    shopper_pool, user_id, url_no_valid, shopper_url, data_base
+):
     """
         Тест работы пула покупателей в условиях неудавшегося запроса к API на этапе передачи данных пользователя.
     Предполагаем что объект пользователя после успешного получения данных был изменен. После неудачной попытки отправить данные

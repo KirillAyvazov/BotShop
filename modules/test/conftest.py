@@ -11,32 +11,37 @@ from modules.test.server.model import db
 @pytest.fixture()
 def shopper_url():
     """Фикстура возвращает url для получения данных пользователей"""
-    return 'http://127.0.0.1:5000/user'
+    return "http://127.0.0.1:5000/user"
+
 
 @pytest.fixture()
 def order_url():
     """Фикстура возвращает url для получения данных о заказах"""
-    return 'http://127.0.0.1:5000/order'
+    return "http://127.0.0.1:5000/order"
+
 
 @pytest.fixture()
 def category():
     """Фикстура возвращает url для получения данных о категориях продуктов"""
-    return 'http://127.0.0.1:5000/category'
+    return "http://127.0.0.1:5000/category"
+
 
 @pytest.fixture()
 def product():
     """Фикстура возвращает url для получения данных продуктов"""
-    return 'http://127.0.0.1:5000/product'
+    return "http://127.0.0.1:5000/product"
+
 
 @pytest.fixture()
 def authorization_url():
     """Фикстура возвращает url для авторизации пользователей"""
-    return 'http://127.0.0.1:5000/seller'
+    return "http://127.0.0.1:5000/seller"
+
 
 @pytest.fixture()
 def url_no_valid(shopper_url, shopper_pool):
     """Фикстура возвращает недействительный url"""
-    return 'http://127.0.0.1:5000/no_valid'
+    return "http://127.0.0.1:5000/no_valid"
 
 
 @pytest.fixture(scope="session")
@@ -68,7 +73,7 @@ def seller_pool(shopper_url, order_url, authorization_url):
         seller_url=shopper_url,
         orders_url=order_url,
         session_time=0.00001,
-        authorization_url=authorization_url
+        authorization_url=authorization_url,
     )
 
 

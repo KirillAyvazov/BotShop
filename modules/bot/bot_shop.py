@@ -26,10 +26,9 @@ class BotShop(TeleBot):
     оригинального класса.
     """
 
-    def __init__(self,
-                 token: str,
-                 disappearing_messages: bool = True,
-                 message_limit: int = 1):
+    def __init__(
+        self, token: str, disappearing_messages: bool = True, message_limit: int = 1
+    ):
         super().__init__(token)
         self.user_pool = None
         self.disappearing_messages: bool = disappearing_messages
@@ -52,7 +51,7 @@ class BotShop(TeleBot):
 
                 except ApiTelegramException as ex:
                     pass
-                    #dev_log.exception('Не удалось удалить сообщение бота в чате пользователя {}'.format(message.chat.id),
+                    # dev_log.exception('Не удалось удалить сообщение бота в чате пользователя {}'.format(message.chat.id),
                     #                     exc_info=ex)
 
     def send_message(self, *args, **kwargs) -> Message:
@@ -64,15 +63,16 @@ class BotShop(TeleBot):
         """
 
         try:
-            message: Message = super().send_message(*args, **kwargs, parse_mode = "HTML")
+            message: Message = super().send_message(*args, **kwargs, parse_mode="HTML")
 
             if self.disappearing_messages:
-                self.__delete_old_message(message, 'bot')
+                self.__delete_old_message(message, "bot")
             return message
 
         except Exception as ex:
-            dev_log.exception("Не удалось отправить сообщение пользователю из-за ошибки:", exc_info=ex)
-
+            dev_log.exception(
+                "Не удалось отправить сообщение пользователю из-за ошибки:", exc_info=ex
+            )
 
     def add_user_pool(self, user_pool) -> None:
         """
@@ -89,20 +89,29 @@ class BotShop(TeleBot):
         сообщений будет превышать установленный в настройках лимит message_limit. Удалены будут более поздние сообщения,
         превышающие лимит.
         """
+
         @functools.wraps(func)
         def wrapped_func(*args, **kwargs):
             result = func(*args, **kwargs)
 
             if self.user_pool and self.disappearing_messages:
-                message_list = list(filter(lambda i_object: isinstance(i_object, Message), args))
+                message_list = list(
+                    filter(lambda i_object: isinstance(i_object, Message), args)
+                )
 
                 if len(message_list) <= 0:
-                    message_list = list(filter(lambda i_object: isinstance(i_object, Message), kwargs.values()))
+                    message_list = list(
+                        filter(
+                            lambda i_object: isinstance(i_object, Message),
+                            kwargs.values(),
+                        )
+                    )
 
                 if len(message_list) > 0:
-                    self.__delete_old_message(message_list[0], 'user')
+                    self.__delete_old_message(message_list[0], "user")
 
             return result
+
         return wrapped_func
 
     def close_session(self, user_id: int) -> None:
@@ -120,44 +129,58 @@ class BotShop(TeleBot):
         self.send_message(user_id, text)
         self.delete_state(user_id)
 
-    def send_product(self, chat_id: int, product, text_message: Optional[str] = None,
-                     post_text_message: Optional[str] = None,
-                     keyboard = None) -> Message:
+    def send_product(
+        self,
+        chat_id: int,
+        product,
+        text_message: Optional[str] = None,
+        post_text_message: Optional[str] = None,
+        keyboard=None,
+    ) -> Message:
         """
             Метод предназначен для отправки пользователю информации о товаре - все имеющиеся изображения и описание,
         а так же клавиатуру для управления карточкой товара. На вход метод принимает id пользователя, объект - продукт,
         из соответствующего модуля и клавиатуру которую необходимо отправить
         """
         with MessageDeletionBlocker(self) as register:
-            msg_list: List[Message] = self.send_media_group(chat_id, product.image, disable_notification=True)
+            msg_list: List[Message] = self.send_media_group(
+                chat_id, product.image, disable_notification=True
+            )
 
             text = str(product)
             if text_message:
-                text = '\n\n'.join([text_message, text])
+                text = "\n\n".join([text_message, text])
 
             if post_text_message:
-                text = '\n\n'.join([text, post_text_message])
+                text = "\n\n".join([text, post_text_message])
 
-            msg_caption = self.send_message(chat_id, text=text, reply_markup=keyboard, disable_notification=True)
+            msg_caption = self.send_message(
+                chat_id, text=text, reply_markup=keyboard, disable_notification=True
+            )
 
             register(*msg_list, msg_caption)
 
         if not isinstance(product.image[0].media, str):
-            product.image = [InputMediaPhoto(i_message.photo[len(i_message.photo) - 1].file_id)
-                             for i_message in msg_list]
+            product.image = [
+                InputMediaPhoto(i_message.photo[len(i_message.photo) - 1].file_id)
+                for i_message in msg_list
+            ]
 
     def notify_user(self, user_id: int, message: str) -> None:
         """Метод отправляет пользователю уведомление с заданным текстом"""
         with MessageDeletionBlocker(self):
             try:
-                message = '\n'.join(["<b>Новое уведомление ✉️:</b>", message])
+                message = "\n".join(["<b>Новое уведомление ✉️:</b>", message])
                 message = self.send_message(user_id, message)
 
                 if self.user_pool:
                     self.user_pool.add_notification_id(user_id, message.id)
 
             except ApiTelegramException as ex:
-                dev_log.exception(f'Не удалось отправить сообщение пользователю {user_id} из-за ошибки:', exc_info=ex)
+                dev_log.exception(
+                    f"Не удалось отправить сообщение пользователю {user_id} из-за ошибки:",
+                    exc_info=ex,
+                )
 
     def polling(self, *args, **kwargs) -> None:
         """
@@ -169,4 +192,4 @@ class BotShop(TeleBot):
                 super().polling(*args, **kwargs)
 
             except Exception as ex:
-                dev_log.exception('Бот упал с ошибкой:', exc_info=ex)
+                dev_log.exception("Бот упал с ошибкой:", exc_info=ex)

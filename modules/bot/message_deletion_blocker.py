@@ -21,6 +21,7 @@ class MessageDeletionBlocker:
     сообщений, отправленных до нового блока сообщений.
 
     """
+
     __disappearing_messages_default: Optional[bool] = None
 
     def __init__(self, bot):
@@ -49,17 +50,19 @@ class MessageDeletionBlocker:
             if len(args) > 0:
                 message = args[0]
                 user = self.bot.user_pool.get(message.chat.id)
-                user.append_message(message.id, 'bot')
+                user.append_message(message.id, "bot")
 
                 if delete_old_message:
-                    for i_message_id in user.pop_message('bot', self.bot.message_limit):
+                    for i_message_id in user.pop_message("bot", self.bot.message_limit):
                         try:
                             self.bot.delete_message(message.chat.id, i_message_id)
                         except ApiTelegramException as ex:
-                            dev_log.exception(f'Не удалось удалить сообщение бота в чате {message.chat.id}')
+                            dev_log.exception(
+                                f"Не удалось удалить сообщение бота в чате {message.chat.id}"
+                            )
 
                 for i_message in args[1:]:
-                    user.append_message(i_message.id, 'bot')
+                    user.append_message(i_message.id, "bot")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
