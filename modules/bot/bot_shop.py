@@ -62,12 +62,17 @@ class BotShop(TeleBot):
         пользователя. Если количество отправленных ботом сообщений будет превышать установленный лимит message_limit -
         более ранние сообщения, превышающие лимит, будут удалены.
         """
-        message: Message = super().send_message(*args, **kwargs, parse_mode = "HTML")
 
-        if self.disappearing_messages:
-            self.__delete_old_message(message, 'bot')
+        try:
+            message: Message = super().send_message(*args, **kwargs, parse_mode = "HTML")
 
-        return message
+            if self.disappearing_messages:
+                self.__delete_old_message(message, 'bot')
+            return message
+
+        except Exception as ex:
+            dev_log.exception("Не удалось отправить сообщение пользователю из-за ошибки:", exc_info=ex)
+
 
     def add_user_pool(self, user_pool) -> None:
         """

@@ -10,13 +10,13 @@ from sqlalchemy import Column, Integer, String, PrimaryKeyConstraint, DateTime, 
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from datetime import datetime, timedelta
 import pytz
-from typing import List, Literal, Dict, Any, Callable, Optional, Tuple, Union
+from typing import List, Literal, Dict, Any, Callable, Optional, Union, Tuple
 import os
 from queue import Queue, LifoQueue
 from telebot.types import Message
 import requests
 import json
-from abc import ABC, abstractmethod
+from abc import ABC
 import time
 from threading import Semaphore
 import sys
@@ -88,6 +88,7 @@ class User:
                  lastName: Optional[str] = None,
                  nickname: Optional[str] = None,
                  phoneNumber: Optional[str] = None,
+                 homeAddress: Optional[str] = None,
                  ):
         self.tgId: int = tg_id
         self.orders_url: str = orders_url
@@ -95,20 +96,23 @@ class User:
         self.lastName: Optional[str] = lastName
         self.nickname: Optional[str] = nickname
         self.phoneNumber: Optional[str] = phoneNumber
+        self.homeAddress: Optional[str] = homeAddress
         self.__message_id_bot_to_user = Queue(30)
         self.__message_id_user_to_bot = Queue(30)
         self.__recently_deleted_messages = list()
         self.last_session: Optional[datetime] = None
         self.__queue_of_steps = LifoQueue(40)
         self.registered_on_server: bool = False
+        self.no_connection_server: bool = True
         self.product_index: int = 0
         self.order_index: int = 0
         self.category_index: int = 0
         self.product_viewed: Optional[Product] = None
         self.order_viewed: Optional[Product] = None
         self.count_product: int = 1
-        self.back = False
+        self.back: bool = False
 
+        self._personal_data_cache: Optional[int] = None
         self.__restore_data_in_local_db()
 
     def __restore_data_in_local_db(self) -> None:
@@ -250,6 +254,29 @@ class User:
 
         return list_notifications_id
 
+    def _get_personal_data_cache(self) -> int:
+        """
+            Метод отсеивает из персональных данных пользователя значения None и из оставшихся значений вычисляет хэш.
+        Это вспомогательный метод. Он необходим для определения - были ли изменены персональные данные покупателя.
+        Применяется в функции is_changed
+        """
+        list_personal_data = [self.firstName, self.lastName, self.nickname, self.phoneNumber, self.homeAddress]
+        list_personal_data = list(filter(lambda i_elem: not i_elem is None, list_personal_data))
+        list_personal_data = list(map(str, list_personal_data))
+        return hash(''.join(list_personal_data))
+
+    def is_changed(self) -> bool:
+        """Метод проверяет, были ли изменены персональны данные пользователя после их получения от внешнего API"""
+        return not self._get_personal_data_cache() == self._personal_data_cache
+
+    def update_personal_data_cache(self) -> None:
+        """
+            Метод обновляет значение атрибута _personal_data_cache на актуальное значение с учетом произошедших
+        изменений объекта. Этот метод используется при успешной отправке данных пользователя на сервер, что бы изменить
+        статус объекта с "измененного" на "сохраненный"
+        """
+        self._personal_data_cache = self._get_personal_data_cache()
+
 
 class UserSchema(Schema):
     """Класс - схема данных предназначенная для валидации данных пользователя получаемых от внешнего API"""
@@ -258,6 +285,7 @@ class UserSchema(Schema):
     lastName = fields.Str(allow_none=True)
     nickname = fields.Str(allow_none=True)
     phoneNumber = fields.Str(allow_none=True)
+    homeAddress = fields.Str(allow_none=True)
     orders_url = fields.Str(required=True, allow_none=False)
 
 
@@ -288,19 +316,24 @@ class UserPool(ABC):
         """
         user = self._pool.get(tg_id, None)
 
+        no_connect_server = True
         if not user:
-            user = self._api_get(tg_id)
-            self._pool[tg_id] = user
+            user, no_connect_server = self._api_get(tg_id)
+            if user:
+                user.no_connection_server = no_connect_server
+                self._pool[tg_id] = user
 
         if not user:
             user = self.__user_class(tg_id, self._orders_url)
+            user.no_connection_server = no_connect_server
             self._pool[tg_id] = user
 
         user.update_activity_time()
 
         return user
 
-    def _api_get(self, tg_id: int, get_user_object: bool = True) -> Union[Optional[User], Optional[Dict[str, Any]]]:
+    def _api_get(self, tg_id: int, get_user_object: bool = True) -> (
+            Tuple)[Union[Optional[User], Optional[Dict[str, Any]]], bool]:
         """
             Метод реализует получение данных пользователя от внешнего API. Если аргумент get_user_object = True,
         метод вернет объект пользователя, если False - словарь с данными пользователя
@@ -314,32 +347,41 @@ class UserPool(ABC):
                     return data
 
                 data["orders_url"] = self._orders_url
-                return self._user_schema.loads(json.dumps(data), unknown='exclude')
+                user = self._user_schema.loads(json.dumps(data), unknown='exclude')
+                user.registered_on_server = True
+                return user, False
 
             dev_log.info(f'Не удалось получить от сервера данные пользователя {tg_id}. Статус код {response.status_code}')
+
+            return None, True
 
         except Exception as ex:
             dev_log.exception('При попытке получить от сервера данные пользователя {} произошла ошибка:'.format(tg_id),
                               exc_info=ex)
 
-    def _api_put(self, user: User) -> None:
+            return None, True
+
+
+    def _api_put(self, user: User) -> Optional[bool]:
         """Метод осуществляет сохранение измененных данных пользователя на внешнем сервере"""
         try:
             data = self._user_schema.dumps(user)
             response = requests.put(self._user_url, data=data, headers=self._content_type)
             if response.status_code == 200:
                 dev_log.debug(f'Данные пользователя {user.tgId} успешно обновлены на сервере')
+                return True
 
         except Exception as ex:
             dev_log.exception(f'Не удалось обновить данные пользователя {user.tgId} из-за ошибки:', exc_info=ex)
 
-    def _api_post(self, user: User) -> None:
+    def _api_post(self, user: User) -> Optional[bool]:
         """Метод осуществляет добавление нового пользователя на внешний сервер"""
         try:
             data = self._user_schema.dumps(user)
             response = requests.post(self._user_url, data=data, headers=self._content_type)
             if response.status_code == 200:
                 dev_log.debug(f'Данные нового пользователя {user.tgId} успешно добавлены на сервер')
+                return True
 
         except Exception as ex:
             dev_log.exception(f'Не удалось добавить данные нового пользователя {user.tgId} из-за ошибки:', exc_info=ex)
@@ -352,32 +394,77 @@ class UserPool(ABC):
         """
         self._bot = bot
 
-    @abstractmethod
     def _save_user_data(self, list_user: List[User]) -> None:
         """
-            Данный метод является абстрактным и используется для гарантии реализации данного метода в
-        дочерних классах.
+            Данный метод является вспомогательным и используется в методе data_control. Для каждого пользователя в
+        переданном списке этот метод отправляет сообщение об окончании сессии при помощи телеграмм бота, сохраняет
+        данные пользователя в локальную базу данных, и, если пользователя был зарегистрирован во внешнем API и были
+        изменены его данные - отправляет эти изменения на сервер. Если покупатель не был зарегистрирован на сервере -
+        делается пост запрос с его данными на сервер.
         """
-        pass
+        print("*"*20)
+        for i_user in list_user:
+            if self._bot:
+                self._bot.close_session(i_user.tgId)
+
+            i_user.saving_to_local_db()
+
+            result = False
+            if not i_user.no_connection_server:
+                if not i_user.registered_on_server:
+                    result = self._api_post(i_user)
+                    print("ПУНКТ 1")
+                elif i_user.is_changed():
+                    result = self._api_put(i_user)
+                    print("ПУНКТ 2")
+
+            else:
+                if not i_user.registered_on_server:
+                    if not i_user.is_changed():
+                        result = self._api_post(i_user)
+                        print("ПУНКТ 3")
+
+                    elif i_user.is_changed():
+                        result = self._api_post(i_user)
+                        print("ПУНКТ 4")
+
+                        if not result:
+                            result = self._api_put(i_user)
+                            print("ПУНКТ 5")
+
+            if result:
+                i_user.update_personal_data_cache()
+                i_user.registered_on_server = True
+
 
     @execute_in_new_thread(daemon=True)
-    def data_control(self) -> None:
+    def data_control(self, *, test_step: Optional[int] = None, test_session_time: Optional[int] = None) -> None:
         """
             Этот метод - бесконечный цикл выполняемый в отдельном потоке - служит для контроля востребованности данных
         пользователей. Если в пуле пользователей есть объекты, взаимодействие с которыми не осуществлялось установленное
         время - они будут удалены из оперативной памяти.
         """
+        # Код для тестирования:
+        if test_session_time:
+            self._session_time = test_session_time
+
         time_delta = timedelta(seconds=self._session_time)
+
         while self._session_time:
             time.sleep(self._session_time // 2)
+
             list_user_to_delete = list(filter(lambda i_user: datetime.now(moscow_tz) - i_user.last_session > time_delta,
                                                  self._pool.values()))
 
-            self._save_user_data(list_user_to_delete)
-            self._delete_user_notifications(list_user_to_delete)
+            try:
+                self._save_user_data(list_user_to_delete)
+                self._delete_user_notifications(list_user_to_delete)
+
+            except Exception as ex:
+                dev_log.exception("При обработке данных пользователей произошла ошибка:", exc_info=ex)
 
             new_pool = {i_id: i_user for i_id, i_user in self._pool.items()
-                        if i_user not in list_user_to_delete}
+                        if i_user not in list_user_to_delete or i_user.is_changed()}
 
             with Semaphore():
                 initial_pool_size = sys.getsizeof(self._pool)
@@ -387,6 +474,15 @@ class UserPool(ABC):
             dev_log.debug('Размер пула покупателей до/после очищения: {}/{}'.format(initial_pool_size,
                                                                                     final_size_pool))
             new_pool = None
+
+            # Код для выполнения пошаговых тестов
+            if isinstance(test_step, int):
+                if test_step <= 0:
+                    break
+                test_step -= 1
+
+        dev_log.warning("Метод data_control завершил свое выполнение!")
+
 
     def is_active(self, tg_id) -> bool:
         """
@@ -415,3 +511,7 @@ class UserPool(ABC):
             dev_log.exception(f"Не удалось добавить в базу данных id {notification_id} "
                               f"уведомления пользователя {user_id}", exc_info=ex)
             session.rollback()
+
+    def get_pool_size(self):
+        """Метод возвращает размер пула (количество элементов в пуле"""
+        return len(self._pool.keys())

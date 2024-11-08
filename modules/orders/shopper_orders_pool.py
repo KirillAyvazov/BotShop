@@ -36,11 +36,12 @@ class ShopperOrdersPool:
                 return self.__order_schema.loads(json.dumps(data), many=True)
 
             dev_log.info(f'Не удалось получить заказы пользователя {self.__tgId} - статус код {response.status_code}')
-            return []
 
         except Exception as ex:
             dev_log.exception(f'Не удалось получить список заказов пользователя {self.__tgId} из-за ошибки:',
                               exc_info=ex)
+
+        return []
 
     def __call__(self, *args, **kwargs) -> List[Order]:
         """При обращении к объекту пула заказов как к вызываемому объекту будет возвращен список заказов"""

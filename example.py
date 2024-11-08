@@ -10,6 +10,9 @@ from modules.user import ShopperPool, SellerPool
 from modules.products import CategoryPool
 
 
+
+
+
 # КОНФИГУРАТОР
 # Создаём объект - конфигуратор. Объект, хранящий все настройки проекта
 configurator = Configurator()
@@ -86,3 +89,4 @@ if __name__ == '__main__':
         basket = user.get_basket() # Получаем корзину пользователя
         bot.send_message(message.chat.id, str(basket)) # Отправляем текст корзины
 
+    bot.polling()

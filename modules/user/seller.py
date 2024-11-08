@@ -29,14 +29,15 @@ class Seller(User):
                  lastName: Optional[str] = None,
                  nickname: Optional[str] = None,
                  phoneNumber: Optional[str] = None,
+                 homeAddress: Optional[str] = None
                  ):
-        super().__init__(tgId, orders_url, firstName, lastName, nickname, phoneNumber)
+        super().__init__(tgId, orders_url, firstName, lastName, nickname, phoneNumber, homeAddress)
         self.orders_pool: Optional[SellerOrdersPool] = None
         self.authorization: bool = False
         self.status: Optional[str] = None
         self.authorization_counter: int = 0
-        self.__personal_data_cache = self.__get_personal_data_cache()
 
+        self._personal_data_cache = self._get_personal_data_cache()
         self.__get_active_orders()
 
     @execute_in_new_thread(daemon=True)
@@ -86,28 +87,12 @@ class Seller(User):
 
         return '\n'.join(text)
 
-    def __get_personal_data_cache(self) -> int:
-        """
-            Метод отсеивает из персональных данных продавца значения None и из оставшихся значений вычисляет хэш.
-        Это вспомогательный метод. Он необходим для определения - были ли изменены персональные данные продавца.
-        Применяется в функции is_changed
-        """
-        list_personal_data = [self.firstName, self.lastName, self.nickname, self.phoneNumber]
-        list_personal_data = list(filter(lambda i_elem: not i_elem is None, list_personal_data))
-        list_personal_data = list(map(str, list_personal_data))
-        return hash(''.join(list_personal_data))
-
-    def is_changed(self) -> bool:
-        """Метод проверяет, были ли изменены персональны данные продавца после их получения от внешнего API"""
-        return not self.__get_personal_data_cache() == self.__personal_data_cache
-
 
 class SellerSchema(UserSchema):
     """Класс - схема данных предназначенная для валидации данных продавца получаемых от внешнего API"""
     @post_load
     def create_shopper(self, data, **kwargs) -> Seller:
         seller = Seller(**data)
-        seller.registered_on_server = True
         return seller
 
 
@@ -198,24 +183,6 @@ class SellerPool(UserPool):
 
         return seller
 
-    def _save_user_data(self, list_seller: List[Seller]) -> None:
-        """
-            Данный метод является вспомогательным и используется в методе data_control. Для каждого пользователя в
-        переданном списке этот метод отправляет сообщение об окончании сессии при помощи телеграмм бота, сохраняет
-        данные пользователя в локальную базу данных, и, если пользователя был зарегистрирован во внешнем API и были
-        изменены его данные - отправляет эти изменения на сервер. Если покупатель не был зарегистрирован на сервере -
-        делается пост запрос с его данными на сервер.
-        """
-        for i_seller in list_seller:
-            if self._bot:
-                self._bot.close_session(i_seller.tgId)
-
-            i_seller.saving_to_local_db()
-
-            if i_seller.is_changed() and i_seller.registered_on_server:
-                self._api_put(i_seller)
-            elif not i_seller.registered_on_server:
-                self._api_post(i_seller)
 
     def access_control(self, status: List[str] = ["admin", "seller"]) -> Callable:
         """

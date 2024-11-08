@@ -30,11 +30,9 @@ class Shopper(User):
                  phoneNumber: Optional[str] = None,
                  homeAddress: Optional[str] = None
                  ):
-        super().__init__(tgId, orders_url, firstName, lastName, nickname, phoneNumber)
-        self.homeAddress: Optional[str] = homeAddress
+        super().__init__(tgId, orders_url, firstName, lastName, nickname, phoneNumber, homeAddress)
         self.__orders: Optional[ShopperOrdersPool] = None
-        self.__personal_data_cache = self.__get_personal_data_cache()
-
+        self._personal_data_cache = self._get_personal_data_cache()
         self.__get_orders()
 
     def __repr__(self) -> str:
@@ -57,21 +55,6 @@ class Shopper(User):
             text.append('<b>Домашний адрес:</b> {}'.format(self.homeAddress))
 
         return '\n'.join(text)
-
-    def __get_personal_data_cache(self) -> int:
-        """
-            Метод отсеивает из персональных данных пользователя значения None и из оставшихся значений вычисляет хэш.
-        Это вспомогательный метод. Он необходим для определения - были ли изменены персональные данные покупателя.
-        Применяется в функции is_changed
-        """
-        list_personal_data = [self.firstName, self.lastName, self.nickname, self.phoneNumber, self.homeAddress]
-        list_personal_data = list(filter(lambda i_elem: not i_elem is None, list_personal_data))
-        list_personal_data = list(map(str, list_personal_data))
-        return hash(''.join(list_personal_data))
-
-    def is_changed(self) -> bool:
-        """Метод проверяет, были ли изменены персональны данные покупателя после их получения от внешнего API"""
-        return not self.__get_personal_data_cache() == self.__personal_data_cache
 
     @execute_in_new_thread(daemon=True)
     def __get_orders(self) -> None:
@@ -105,12 +88,9 @@ class Shopper(User):
 
 class ShopperSchema(UserSchema):
     """Класс - схема данных предназначенная для валидации данных покупателя получаемых от внешнего API"""
-    homeAddress = fields.Str(allow_none=True)
-
     @post_load
     def create_shopper(self, data, **kwargs) -> Shopper:
         shopper = Shopper(**data)
-        shopper.registered_on_server = True
         return shopper
 
 
@@ -132,22 +112,14 @@ class ShopperPool(UserPool):
         изменены его данные - отправляет эти изменения на сервер. Если покупатель не был зарегистрирован на сервере -
         делается пост запрос с его данными на сервер.
         """
+        super()._save_user_data(list_shoppers)
+
         for i_shopper in list_shoppers:
-            if self._bot:
-                self._bot.close_session(i_shopper.tgId)
-
-            i_shopper.saving_to_local_db()
-
             for i_order in i_shopper.get_orders():
                 i_order.save_on_server()
 
             basket = i_shopper.get_basket()
             basket.save_on_server()
-
-            if i_shopper.is_changed() and i_shopper.registered_on_server:
-                self._api_put(i_shopper)
-            elif not i_shopper.registered_on_server:
-                self._api_post(i_shopper)
 
     def get_personal_data(self, tg_id: int) -> str:
         """
